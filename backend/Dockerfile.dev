@@ -1,0 +1,22 @@
+# Development Dockerfile with Maven for building/testing
+FROM eclipse-temurin:25-jdk-alpine
+
+WORKDIR /app
+
+# Install Maven
+RUN apk add --no-cache maven
+
+# Copy pom.xml for dependency resolution
+COPY pom.xml .
+
+# Download dependencies (this layer will be cached)
+RUN mvn dependency:go-offline -B
+
+# The source code will be mounted as a volume
+# This allows hot-reload during development
+
+EXPOSE 8080
+
+# Run Spring Boot with DevTools enabled and fork disabled for proper signal handling
+# The -Dspring-boot.run.fork=false ensures DevTools works correctly in Docker
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false", "-Dspring-boot.run.profiles=dev"]

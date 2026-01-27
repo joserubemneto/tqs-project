@@ -1,0 +1,14 @@
+#!/bin/sh
+# Maven Wrapper script - downloads and runs Maven
+# This is a simplified version. For production, use the full wrapper from Maven.
+
+set -e
+
+MAVEN_VERSION="3.9.6"
+
+if command -v mvn &> /dev/null; then
+    exec mvn "$@"
+else
+    echo "Maven not found. Please install Maven or use the full Maven Wrapper."
+    exit 1
+fi
