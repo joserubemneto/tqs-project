@@ -1,8 +1,8 @@
 # UA Volunteering Platform
 
 [![Backend CI](https://github.com/joserubemneto/tqs-project/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/joserubemneto/tqs-project/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/joserubemneto/tqs-project/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/joserubemneto/tqs-project/actions/workflows/frontend-ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=joserubemneto_tqs-project&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=joserubemneto_tqs-project)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=joserubemneto_tqs-project&metric=coverage)](https://sonarcloud.io/summary/new_code?id=joserubemneto_tqs-project)
 
 Digital volunteering marketplace for Universidade de Aveiro (UA). The platform connects volunteering opportunities with students, faculty, and staff, featuring a points-based rewards system.
 
@@ -70,10 +70,20 @@ tqs-project/
 | Stage | Description |
 |-------|-------------|
 | Build | Compile Java code |
-| Unit Tests | Run `*Test.java` with Surefire |
-| Integration Tests | Run `*IT.java` with Failsafe + PostgreSQL |
-| Coverage | Generate JaCoCo report |
-| SonarCloud | Static analysis + coverage upload |
+| Test | Run unit + integration tests |
+| Coverage | JaCoCo report (≥80% required) |
+| SonarCloud | Static analysis |
+
+### Frontend Pipeline (`frontend-ci.yml`)
+
+| Stage | Description |
+|-------|-------------|
+| Install | pnpm install dependencies |
+| Lint | Biome check (lint + format) |
+| Type Check | TypeScript validation |
+| Test | Vitest with coverage |
+| Build | Production build |
+| SonarCloud | Static analysis |
 
 ### Setup SonarCloud
 
