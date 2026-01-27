@@ -21,8 +21,15 @@
         <java.version>25</java.version>
         <cucumber.version>7.15.0</cucumber.version>
         <testcontainers.version>1.19.3</testcontainers.version>
-        <sonar.organization>your-org</sonar.organization>
+        <!-- SonarCloud Configuration -->
+        <sonar.organization>joserubemneto</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.projectKey>joserubemneto_tqs-project</sonar.projectKey>
+        <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.java.source>${java.version}</sonar.java.source>
+        <sonar.sources>src/main/java</sonar.sources>
+        <sonar.tests>src/test/java</sonar.tests>
+        <sonar.exclusions>**/config/**,**/dto/**,**/model/**,**/*Application.java</sonar.exclusions>
     </properties>
 
     <dependencies>
@@ -272,6 +279,13 @@
                         <include>**/*IT.java</include>
                     </includes>
                 </configuration>
+            </plugin>
+
+            <!-- SonarCloud Analysis -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>4.0.0.4121</version>
             </plugin>
         </plugins>
     </build>
