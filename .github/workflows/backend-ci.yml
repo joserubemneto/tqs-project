@@ -48,21 +48,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Build project
-        run: mvn clean compile -B -DskipTests
-
-      - name: Run unit tests
-        run: mvn test -B
+      - name: Build, Test & Verify Coverage
+        run: mvn clean verify -B
         env:
           SPRING_PROFILES_ACTIVE: test
-
-      - name: Run integration tests
-        run: mvn verify -B -DskipUnitTests
-        env:
-          SPRING_PROFILES_ACTIVE: test
-
-      - name: Generate JaCoCo coverage report
-        run: mvn jacoco:report -B
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
