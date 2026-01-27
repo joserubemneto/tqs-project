@@ -50,6 +50,29 @@ services:
       start_period: 120s
       retries: 3
 
+  # Frontend (Development mode with hot-reload)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: volunteering-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    volumes:
+      # Mount source for hot-reload
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
+      # pnpm cache
+      - pnpm_cache:/root/.local/share/pnpm
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   maven_cache:
+  pnpm_cache:
