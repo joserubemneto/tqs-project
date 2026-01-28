@@ -251,7 +251,10 @@ describe('RegisterForm', () => {
       await user.type(screen.getByLabelText(/name/i), 'Promoter User')
       await user.type(screen.getByLabelText(/email/i), 'promoter@ua.pt')
       await user.type(screen.getByLabelText(/password/i), 'password123')
-      await user.selectOptions(screen.getByRole('combobox', { name: /i want to join as/i }), 'PROMOTER')
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: /i want to join as/i }),
+        'PROMOTER',
+      )
       await user.click(screen.getByRole('button', { name: /create account/i }))
 
       await waitFor(() => {
@@ -278,13 +281,20 @@ describe('RegisterForm', () => {
     it('should show loading state during submission', async () => {
       const user = userEvent.setup()
       vi.mocked(register).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          id: 1,
-          email: 'test@ua.pt',
-          name: 'Test User',
-          role: 'VOLUNTEER',
-          token: 'mock-token',
-        }), 100)),
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: 1,
+                  email: 'test@ua.pt',
+                  name: 'Test User',
+                  role: 'VOLUNTEER',
+                  token: 'mock-token',
+                }),
+              100,
+            ),
+          ),
       )
 
       render(<RegisterForm />)
@@ -300,13 +310,20 @@ describe('RegisterForm', () => {
     it('should disable form fields during loading', async () => {
       const user = userEvent.setup()
       vi.mocked(register).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          id: 1,
-          email: 'test@ua.pt',
-          name: 'Test User',
-          role: 'VOLUNTEER',
-          token: 'mock-token',
-        }), 100)),
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: 1,
+                  email: 'test@ua.pt',
+                  name: 'Test User',
+                  role: 'VOLUNTEER',
+                  token: 'mock-token',
+                }),
+              100,
+            ),
+          ),
       )
 
       render(<RegisterForm />)
@@ -325,13 +342,20 @@ describe('RegisterForm', () => {
     it('should disable submit button during loading', async () => {
       const user = userEvent.setup()
       vi.mocked(register).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          id: 1,
-          email: 'test@ua.pt',
-          name: 'Test User',
-          role: 'VOLUNTEER',
-          token: 'mock-token',
-        }), 100)),
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  id: 1,
+                  email: 'test@ua.pt',
+                  name: 'Test User',
+                  role: 'VOLUNTEER',
+                  token: 'mock-token',
+                }),
+              100,
+            ),
+          ),
       )
 
       render(<RegisterForm />)
