@@ -1,6 +1,21 @@
-import { useState, type FormEvent } from 'react'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui'
-import { register, setAuthToken, parseAuthError, type RegisterRequest, type UserRole } from '@/lib/auth'
+import { type FormEvent, useState } from 'react'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+} from '@/components/ui'
+import {
+  parseAuthError,
+  type RegisterRequest,
+  register,
+  setAuthToken,
+  type UserRole,
+} from '@/lib/auth'
 
 interface RegisterFormProps {
   onSuccess?: () => void
@@ -59,7 +74,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     try {
       const data: RegisterRequest = { email, password, name, role }
       const response = await register(data)
-      
+
       setAuthToken(response.token)
       onSuccess?.()
     } catch (error) {
@@ -81,13 +96,18 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {errors.general && (
-            <div className="p-3 rounded-lg bg-error/10 border border-error text-error text-sm" role="alert">
+            <div
+              className="p-3 rounded-lg bg-error/10 border border-error text-error text-sm"
+              role="alert"
+            >
               {errors.general}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name" required>Name</Label>
+            <Label htmlFor="name" required>
+              Name
+            </Label>
             <Input
               id="name"
               name="name"
@@ -99,13 +119,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               disabled={isLoading}
               autoComplete="name"
             />
-            {errors.name && (
-              <p className="text-sm text-error">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-sm text-error">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" required>Email</Label>
+            <Label htmlFor="email" required>
+              Email
+            </Label>
             <Input
               id="email"
               name="email"
@@ -117,13 +137,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               disabled={isLoading}
               autoComplete="email"
             />
-            {errors.email && (
-              <p className="text-sm text-error">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-sm text-error">{errors.email}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" required>Password</Label>
+            <Label htmlFor="password" required>
+              Password
+            </Label>
             <Input
               id="password"
               name="password"
@@ -135,9 +155,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
               disabled={isLoading}
               autoComplete="new-password"
             />
-            {errors.password && (
-              <p className="text-sm text-error">{errors.password}</p>
-            )}
+            {errors.password && <p className="text-sm text-error">{errors.password}</p>}
           </div>
 
           <div className="space-y-2">

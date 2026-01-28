@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 // Check if we're running in integration mode (with backend)
 const isIntegration = process.env.E2E_INTEGRATION === 'true'
@@ -79,7 +79,7 @@ test.describe('User Registration', () => {
 
     test('should register successfully with valid data', async ({ page }) => {
       const uniqueEmail = `test-${Date.now()}@ua.pt`
-      
+
       await page.getByLabel(/name/i).fill('Test User')
       await page.getByLabel(/email/i).fill(uniqueEmail)
       await page.getByLabel(/password/i).fill('SecurePass123')
@@ -91,7 +91,7 @@ test.describe('User Registration', () => {
 
     test('should register with PROMOTER role', async ({ page }) => {
       const uniqueEmail = `promoter-${Date.now()}@ua.pt`
-      
+
       await page.getByLabel(/name/i).fill('Promoter User')
       await page.getByLabel(/email/i).fill(uniqueEmail)
       await page.getByLabel(/password/i).fill('SecurePass123')
@@ -138,7 +138,7 @@ test.describe('User Registration', () => {
       // Button should show loading state (this might be too fast to catch)
       // Just verify form fields are accessible
       await expect(page.getByLabel(/email/i)).toBeVisible()
-      
+
       await submitPromise
     })
   })
@@ -163,7 +163,7 @@ test.describe('User Registration', () => {
     test('should show error messages with role alert', async ({ page }) => {
       // Submit empty form to trigger errors
       await page.getByRole('button', { name: /create account/i }).click()
-      
+
       // Errors should be visible
       const errorMessages = page.locator('.text-error')
       await expect(errorMessages.first()).toBeVisible()

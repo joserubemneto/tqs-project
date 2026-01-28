@@ -1,4 +1,4 @@
-import { api, ApiError } from './api'
+import { ApiError, api } from './api'
 
 export type UserRole = 'VOLUNTEER' | 'PROMOTER' | 'PARTNER' | 'ADMIN'
 
