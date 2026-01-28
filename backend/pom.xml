@@ -30,6 +30,9 @@
         <sonar.sources>src/main/java</sonar.sources>
         <sonar.tests>src/test/java</sonar.tests>
         <sonar.exclusions>**/config/**,**/dto/**,**/model/**,**/*Application.java</sonar.exclusions>
+        <!-- Xray Configuration -->
+        <xray.projectKey>SCRUM</xray.projectKey>
+        <xray.testPlanKey></xray.testPlanKey> <!-- Optional: Set to link results to a specific test plan -->
     </properties>
 
     <dependencies>
@@ -129,6 +132,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Mockito subclass for Java 21+ compatibility -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-subclass</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -297,6 +306,8 @@
                                 <exclude>ua/tqs/config/*</exclude>
                                 <exclude>ua/tqs/model/*</exclude>
                                 <exclude>ua/tqs/model/enums/*</exclude>
+                                <exclude>ua/tqs/dto/*</exclude>
+                                <exclude>ua/tqs/exception/*</exclude>
                             </excludes>
                         </configuration>
                     </execution>
@@ -315,6 +326,14 @@
                     <excludes>
                         <exclude>**/*IT.java</exclude>
                     </excludes>
+                    <!-- JVM args for Mockito/ByteBuddy compatibility with Java 21+ -->
+                    <argLine>
+                        @{argLine}
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        -XX:+EnableDynamicAgentLoading
+                    </argLine>
                 </configuration>
             </plugin>
 
@@ -334,6 +353,17 @@
                     <includes>
                         <include>**/*IT.java</include>
                     </includes>
+                    <!-- JVM args for Mockito/ByteBuddy compatibility with Java 21+ -->
+                    <argLine>
+                        @{argLine}
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        -XX:+EnableDynamicAgentLoading
+                    </argLine>
+                    <systemPropertyVariables>
+                        <spring.profiles.active>test</spring.profiles.active>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
 
@@ -342,6 +372,20 @@
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
                 <version>4.0.0.4121</version>
+            </plugin>
+
+            <!-- Xray Maven Plugin for test result upload -->
+            <plugin>
+                <groupId>app.getxray</groupId>
+                <artifactId>xray-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <configuration>
+                    <cloud>true</cloud>
+                    <clientId>${env.XRAY_CLIENT_ID}</clientId>
+                    <clientSecret>${env.XRAY_CLIENT_SECRET}</clientSecret>
+                    <projectKey>${xray.projectKey}</projectKey>
+                    <testPlanKey>${xray.testPlanKey}</testPlanKey>
+                </configuration>
             </plugin>
 
             <!-- Flyway Maven Plugin for standalone migrations -->

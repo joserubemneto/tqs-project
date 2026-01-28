@@ -61,4 +61,88 @@ jobs:
           path: |
             backend/target/surefire-reports/
             backend/target/failsafe-reports/
+            backend/target/cucumber-reports/
           retention-days: 7
+
+      - name: Upload Cucumber reports to Xray Cloud
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          JIRA_PROJECT_KEY: SCRUM  # Your Jira project key
+        run: |
+          # Skip if secrets not configured
+          if [ -z "$XRAY_CLIENT_ID" ] || [ -z "$XRAY_CLIENT_SECRET" ]; then
+            echo "Xray credentials not configured, skipping upload"
+            exit 0
+          fi
+          
+          # Check if cucumber report exists
+          if [ ! -f "target/cucumber-reports/cucumber.json" ]; then
+            echo "No Cucumber report found, skipping upload"
+            exit 0
+          fi
+          
+          # Authenticate and get token
+          echo "Authenticating with Xray Cloud..."
+          TOKEN=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" | tr -d '"')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Xray"
+            exit 1
+          fi
+          
+          # Upload Cucumber results
+          echo "Uploading Cucumber results to Xray..."
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/cucumber" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @target/cucumber-reports/cucumber.json)
+          
+          echo "Xray response: $RESPONSE"
+
+      - name: Upload JUnit results to Xray Cloud
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          JIRA_PROJECT_KEY: SCRUM  # Your Jira project key
+        run: |
+          # Skip if secrets not configured
+          if [ -z "$XRAY_CLIENT_ID" ] || [ -z "$XRAY_CLIENT_SECRET" ]; then
+            echo "Xray credentials not configured, skipping upload"
+            exit 0
+          fi
+          
+          # Check if JUnit reports exist
+          JUNIT_FILES=$(find target/surefire-reports -name "TEST-*.xml" 2>/dev/null | head -1)
+          if [ -z "$JUNIT_FILES" ]; then
+            echo "No JUnit reports found, skipping upload"
+            exit 0
+          fi
+          
+          # Authenticate and get token
+          echo "Authenticating with Xray Cloud..."
+          TOKEN=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" | tr -d '"')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Xray"
+            exit 1
+          fi
+          
+          # Upload JUnit results (combine all test reports into one)
+          echo "Uploading JUnit results to Xray..."
+          for file in target/surefire-reports/TEST-*.xml; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?projectKey=$JIRA_PROJECT_KEY" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/xml" \
+                -d @"$file")
+              echo "Response for $file: $RESPONSE"
+            fi
+          done

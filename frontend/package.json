@@ -16,7 +16,12 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:integration": "E2E_INTEGRATION=true playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@base-ui/react": "1.1.0",
@@ -34,6 +39,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.13",
+    "@playwright/test": "1.58.0",
     "@tanstack/react-router-with-query": "1.130.17",
     "@tanstack/router-cli": "1.157.16",
     "@tanstack/router-devtools": "1.157.16",

@@ -1,0 +1,73 @@
+# Docker Compose for E2E tests with full stack
+# Usage: docker-compose -f docker-compose.e2e.yml up -d --build
+# Then run: pnpm test:e2e:integration
+
+services:
+  # PostgreSQL Database for E2E tests
+  postgres-e2e:
+    image: postgres:16-alpine
+    container_name: volunteering-db-e2e
+    environment:
+      POSTGRES_DB: volunteering_e2e
+      POSTGRES_USER: e2e
+      POSTGRES_PASSWORD: e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e -d volunteering_e2e"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Backend API for E2E tests
+  backend-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: volunteering-api-e2e
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-e2e:5432/volunteering_e2e
+      SPRING_DATASOURCE_USERNAME: e2e
+      SPRING_DATASOURCE_PASSWORD: e2e
+      JWT_SECRET: e2e-test-secret-key-for-testing-only-minimum-256-bits-required
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_CLEAN_DISABLED: "false"
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/pom.xml:/app/pom.xml:ro
+      - maven_cache_e2e:/root/.m2
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 10
+
+  # Frontend for E2E tests
+  frontend-e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: volunteering-frontend-e2e
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json:ro
+    depends_on:
+      backend-e2e:
+        condition: service_healthy
+
+volumes:
+  maven_cache_e2e:
