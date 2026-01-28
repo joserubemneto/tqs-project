@@ -143,6 +143,58 @@ jobs:
           path: frontend/test-results/
           retention-days: 7
 
+      - name: Upload E2E results to Xray Cloud
+        if: always()
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          JIRA_PROJECT_KEY: SCRUM
+        run: |
+          # Skip if secrets not configured
+          if [ -z "$XRAY_CLIENT_ID" ] || [ -z "$XRAY_CLIENT_SECRET" ]; then
+            echo "Xray credentials not configured, skipping upload"
+            exit 0
+          fi
+          
+          # Check if JUnit report exists
+          if [ ! -f "frontend/playwright-report/results.xml" ]; then
+            echo "No Playwright JUnit report found, skipping upload"
+            exit 0
+          fi
+          
+          # Authenticate and get token
+          echo "Authenticating with Xray Cloud..."
+          TOKEN=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" | tr -d '"')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Xray"
+            exit 1
+          fi
+          
+          # Create import info JSON specifying Generic (automated) test type
+          cat > /tmp/xray-e2e-info.json << EOF
+          {
+            "fields": {
+              "project": { "key": "$JIRA_PROJECT_KEY" },
+              "summary": "CI Test Execution - E2E Integration Tests (Playwright)",
+              "issuetype": { "name": "Test Execution" }
+            },
+            "xrayFields": {
+              "testType": "Generic"
+            }
+          }
+          EOF
+          
+          # Upload E2E results with multipart request to specify test type
+          echo "Uploading E2E results to Xray..."
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit/multipart" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "info=@/tmp/xray-e2e-info.json;type=application/json" \
+            -F "results=@frontend/playwright-report/results.xml;type=application/xml")
+          echo "Xray response: $RESPONSE"
+
       - name: Show Docker logs on failure
         if: failure()
         run: |

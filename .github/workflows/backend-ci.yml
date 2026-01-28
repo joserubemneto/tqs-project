@@ -92,12 +92,23 @@ jobs:
             exit 1
           fi
           
-          # Upload Cucumber results
+          # Create import info JSON for Cucumber tests
+          cat > /tmp/xray-cucumber-info.json << EOF
+          {
+            "fields": {
+              "project": { "key": "$JIRA_PROJECT_KEY" },
+              "summary": "CI Test Execution - Cucumber BDD Tests",
+              "issuetype": { "name": "Test Execution" }
+            }
+          }
+          EOF
+          
+          # Upload Cucumber results with multipart request
           echo "Uploading Cucumber results to Xray..."
-          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/cucumber" \
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/cucumber/multipart" \
             -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @target/cucumber-reports/cucumber.json)
+            -F "info=@/tmp/xray-cucumber-info.json;type=application/json" \
+            -F "results=@target/cucumber-reports/cucumber.json;type=application/json")
           
           echo "Xray response: $RESPONSE"
 
@@ -132,15 +143,35 @@ jobs:
             exit 1
           fi
           
-          # Upload JUnit results (combine all test reports into one)
-          echo "Uploading JUnit results to Xray..."
+          # Create import info JSON specifying Generic (automated) test type
+          cat > /tmp/xray-info.json << 'EOF'
+          {
+            "fields": {
+              "project": { "key": "SCRUM" },
+              "summary": "CI Test Execution - Backend Unit Tests",
+              "issuetype": { "name": "Test Execution" }
+            },
+            "xrayFields": {
+              "testType": "Generic"
+            }
+          }
+          EOF
+          
+          # Combine all JUnit XML files into a single file for upload
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > /tmp/combined-junit.xml
+          echo '<testsuites>' >> /tmp/combined-junit.xml
           for file in target/surefire-reports/TEST-*.xml; do
             if [ -f "$file" ]; then
-              echo "Uploading $file..."
-              RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit?projectKey=$JIRA_PROJECT_KEY" \
-                -H "Authorization: Bearer $TOKEN" \
-                -H "Content-Type: application/xml" \
-                -d @"$file")
-              echo "Response for $file: $RESPONSE"
+              # Extract content between <testsuite> tags and append
+              sed -n '/<testsuite/,/<\/testsuite>/p' "$file" >> /tmp/combined-junit.xml
             fi
           done
+          echo '</testsuites>' >> /tmp/combined-junit.xml
+          
+          # Upload JUnit results with multipart request to specify test type
+          echo "Uploading JUnit results to Xray..."
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit/multipart" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "info=@/tmp/xray-info.json;type=application/json" \
+            -F "results=@/tmp/combined-junit.xml;type=application/xml")
+          echo "Xray response: $RESPONSE"
