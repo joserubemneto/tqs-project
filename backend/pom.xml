@@ -345,10 +345,11 @@
             </plugin>
 
             <!-- Flyway Maven Plugin for standalone migrations -->
+            <!-- Version must match Spring Boot's managed Flyway version -->
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>10.6.0</version>
+                <version>11.14.1</version>
                 <configuration>
                     <url>${env.FLYWAY_URL}</url>
                     <user>${env.FLYWAY_USER}</user>
@@ -366,12 +367,12 @@
                     <dependency>
                         <groupId>org.postgresql</groupId>
                         <artifactId>postgresql</artifactId>
-                        <version>42.7.2</version>
+                        <version>42.7.9</version>
                     </dependency>
                     <dependency>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-database-postgresql</artifactId>
-                        <version>10.6.0</version>
+                        <version>11.14.1</version>
                     </dependency>
                 </dependencies>
             </plugin>
