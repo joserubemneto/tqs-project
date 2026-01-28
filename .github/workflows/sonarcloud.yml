@@ -1,9 +1,7 @@
 name: SonarCloud Analysis
 
 on:
-  pull_request:
-    branches: [master]
-  workflow_call:  # Allow being called by other workflows
+  workflow_call:  # Called by main CI workflow
 
 jobs:
   sonar:

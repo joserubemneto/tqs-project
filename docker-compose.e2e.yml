@@ -39,6 +39,7 @@ services:
       - ./backend/src:/app/src:ro
       - ./backend/pom.xml:/app/pom.xml:ro
       - maven_cache_e2e:/root/.m2
+      - backend_target_e2e:/app/target
     depends_on:
       postgres-e2e:
         condition: service_healthy
@@ -71,3 +72,4 @@ services:
 
 volumes:
   maven_cache_e2e:
+  backend_target_e2e:

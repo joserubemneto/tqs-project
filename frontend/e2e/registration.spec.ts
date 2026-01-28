@@ -128,18 +128,26 @@ test.describe('User Registration', () => {
 
   test.describe('Loading State', () => {
     test('should disable form during submission', async ({ page }) => {
+      // Intercept API calls to control timing and prevent actual network errors
+      await page.route('**/api/auth/register', async (route) => {
+        // Delay the response to observe loading state
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ token: 'mock-token', user: { id: 1, email: 'test@ua.pt' } }),
+        })
+      })
+
       await page.getByLabel(/name/i).fill('Test User')
       await page.getByLabel(/email/i).fill('test@ua.pt')
       await page.getByLabel(/password/i).fill('SecurePass123')
 
-      // Start the submission
-      const submitPromise = page.getByRole('button', { name: /create account/i }).click()
+      // Click submit
+      await page.getByRole('button', { name: /create account/i }).click()
 
-      // Button should show loading state (this might be too fast to catch)
-      // Just verify form fields are accessible
-      await expect(page.getByLabel(/email/i)).toBeVisible()
-
-      await submitPromise
+      // Button should show loading state
+      await expect(page.getByRole('button', { name: /creating account/i })).toBeVisible()
     })
   })
 
