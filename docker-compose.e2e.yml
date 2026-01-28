@@ -21,7 +21,7 @@ services:
   backend-e2e:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.e2e
     container_name: volunteering-api-e2e
     ports:
       - "8080:8080"
@@ -35,11 +35,6 @@ services:
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       SPRING_FLYWAY_CLEAN_DISABLED: "false"
-    volumes:
-      - ./backend/src:/app/src:ro
-      - ./backend/pom.xml:/app/pom.xml:ro
-      - maven_cache_e2e:/root/.m2
-      - backend_target_e2e:/app/target
     depends_on:
       postgres-e2e:
         condition: service_healthy
@@ -47,29 +42,19 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
       interval: 10s
       timeout: 5s
-      start_period: 120s
-      retries: 10
+      start_period: 180s
+      retries: 15
 
   # Frontend for E2E tests
   frontend-e2e:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.e2e
     container_name: volunteering-frontend-e2e
     ports:
       - "3000:3000"
     environment:
       VITE_API_URL: http://localhost:8080
-    volumes:
-      - ./frontend/src:/app/src:ro
-      - ./frontend/public:/app/public:ro
-      - ./frontend/index.html:/app/index.html:ro
-      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
-      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json:ro
     depends_on:
       backend-e2e:
         condition: service_healthy
-
-volumes:
-  maven_cache_e2e:
-  backend_target_e2e:

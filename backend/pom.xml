@@ -29,7 +29,7 @@
         <sonar.java.source>${java.version}</sonar.java.source>
         <sonar.sources>src/main/java</sonar.sources>
         <sonar.tests>src/test/java</sonar.tests>
-        <sonar.exclusions>**/config/**,**/dto/**,**/model/**,**/*Application.java</sonar.exclusions>
+        <sonar.exclusions>**/config/**,**/dto/**,**/model/**,**/*Application.java,**/exception/EmailAlreadyExistsException.java,**/exception/ErrorResponse.java</sonar.exclusions>
         <!-- Xray Configuration -->
         <xray.projectKey>SCRUM</xray.projectKey>
         <xray.testPlanKey></xray.testPlanKey> <!-- Optional: Set to link results to a specific test plan -->
@@ -307,7 +307,9 @@
                                 <exclude>ua/tqs/model/*</exclude>
                                 <exclude>ua/tqs/model/enums/*</exclude>
                                 <exclude>ua/tqs/dto/*</exclude>
-                                <exclude>ua/tqs/exception/*</exclude>
+                                <!-- Exclude simple exception classes (no logic, just constructors) -->
+                                <exclude>ua/tqs/exception/EmailAlreadyExistsException.class</exclude>
+                                <exclude>ua/tqs/exception/ErrorResponse.class</exclude>
                             </excludes>
                         </configuration>
                     </execution>

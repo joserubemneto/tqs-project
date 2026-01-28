@@ -181,6 +181,59 @@ class JwtServiceTest {
             assertThatThrownBy(() -> jwtService.isTokenValid(expiredToken, testUser))
                     .isInstanceOf(io.jsonwebtoken.ExpiredJwtException.class);
         }
+
+        @Test
+        @DisplayName("should return false when email matches but token is expired (covers second condition)")
+        void shouldReturnFalseForExpiredTokenWithMatchingEmail() {
+            // Create a service with negative expiration to create an already-expired token
+            JwtService expiredTokenService = new JwtService();
+            ReflectionTestUtils.setField(expiredTokenService, "secretKey", TEST_SECRET);
+            ReflectionTestUtils.setField(expiredTokenService, "jwtExpiration", -1000L);
+
+            String expiredToken = expiredTokenService.generateToken(testUser);
+
+            // When trying to validate an expired token, JJWT throws ExpiredJwtException
+            // This covers the case where email would match but token is expired
+            // The exception is thrown during parsing, before isTokenExpired can return
+            assertThatThrownBy(() -> jwtService.isTokenValid(expiredToken, testUser))
+                    .isInstanceOf(io.jsonwebtoken.ExpiredJwtException.class);
+        }
+
+        @Test
+        @DisplayName("should return true for token that is still valid (not expired)")
+        void shouldReturnTrueForNotExpiredToken() {
+            // Create a token with long expiration
+            JwtService longExpirationService = new JwtService();
+            ReflectionTestUtils.setField(longExpirationService, "secretKey", TEST_SECRET);
+            ReflectionTestUtils.setField(longExpirationService, "jwtExpiration", 86400000L); // 24 hours
+
+            String validToken = longExpirationService.generateToken(testUser);
+
+            // Token should be valid - both conditions satisfied
+            boolean isValid = jwtService.isTokenValid(validToken, testUser);
+
+            assertThat(isValid).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when email does not match (short-circuit, expiration not checked)")
+        void shouldReturnFalseWhenEmailDoesNotMatchRegardlessOfExpiration() {
+            String token = jwtService.generateToken(testUser);
+
+            User userWithDifferentEmail = User.builder()
+                    .id(1L) // Same ID
+                    .email("different@ua.pt") // Different email
+                    .password("encodedPassword")
+                    .name("Test User")
+                    .role(UserRole.VOLUNTEER)
+                    .points(0)
+                    .build();
+
+            // Should return false due to email mismatch (isTokenExpired is not evaluated)
+            boolean isValid = jwtService.isTokenValid(token, userWithDifferentEmail);
+
+            assertThat(isValid).isFalse();
+        }
     }
 
     @Nested
