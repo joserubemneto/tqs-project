@@ -23,10 +23,16 @@ services:
       dockerfile: Dockerfile.dev
     container_name: volunteering-api-test
     environment:
-      SPRING_PROFILES_ACTIVE: test
+      SPRING_PROFILES_ACTIVE: integration-test
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-test:5432/volunteering_test
       SPRING_DATASOURCE_USERNAME: test
       SPRING_DATASOURCE_PASSWORD: test
+      # Flyway configuration for PostgreSQL integration tests
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_CLEAN_DISABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
     volumes:
       - ./backend/src:/app/src:ro
       - ./backend/pom.xml:/app/pom.xml:ro
