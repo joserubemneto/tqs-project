@@ -4,17 +4,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
 
@@ -65,10 +62,8 @@ class GlobalExceptionHandlerTest {
         @DisplayName("should return BAD_REQUEST status with validation errors")
         void shouldReturnBadRequestWithValidationErrors() {
             MethodArgumentNotValidException exception = createValidationException(
-                    List.of(
-                            new FieldError("registerRequest", "email", "Email is required"),
-                            new FieldError("registerRequest", "password", "Password must be at least 8 characters")
-                    )
+                    new FieldError("registerRequest", "email", "Email is required"),
+                    new FieldError("registerRequest", "password", "Password must be at least 8 characters")
             );
 
             ResponseEntity<ErrorResponse> response = handler.handleValidationExceptions(exception);
@@ -86,9 +81,7 @@ class GlobalExceptionHandlerTest {
         @DisplayName("should use first validation error as main message")
         void shouldUseFirstValidationErrorAsMainMessage() {
             MethodArgumentNotValidException exception = createValidationException(
-                    List.of(
-                            new FieldError("registerRequest", "name", "Name is required")
-                    )
+                    new FieldError("registerRequest", "name", "Name is required")
             );
 
             ResponseEntity<ErrorResponse> response = handler.handleValidationExceptions(exception);
@@ -100,7 +93,7 @@ class GlobalExceptionHandlerTest {
         @Test
         @DisplayName("should return 'Validation failed' when no errors present")
         void shouldReturnDefaultMessageWhenNoErrors() {
-            MethodArgumentNotValidException exception = createValidationException(List.of());
+            MethodArgumentNotValidException exception = createValidationException();
 
             ResponseEntity<ErrorResponse> response = handler.handleValidationExceptions(exception);
 
@@ -108,14 +101,24 @@ class GlobalExceptionHandlerTest {
             assertThat(response.getBody().getMessage()).isEqualTo("Validation failed");
         }
 
-        private MethodArgumentNotValidException createValidationException(List<FieldError> fieldErrors) {
-            BindingResult bindingResult = mock(BindingResult.class);
-            when(bindingResult.getAllErrors()).thenReturn(List.copyOf(fieldErrors));
+        private MethodArgumentNotValidException createValidationException(FieldError... fieldErrors) {
+            // Create a real BindingResult with field errors
+            BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "registerRequest");
+            for (FieldError error : fieldErrors) {
+                bindingResult.addError(error);
+            }
 
-            MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-            when(exception.getBindingResult()).thenReturn(bindingResult);
-
-            return exception;
+            // Use MethodArgumentNotValidException constructor with BindingResult
+            // We need a MethodParameter, so we'll use Object.toString() method
+            try {
+                MethodParameter methodParameter = new MethodParameter(
+                        Object.class.getMethod("toString"),
+                        -1  // -1 indicates return type, not a parameter
+                );
+                return new MethodArgumentNotValidException(methodParameter, bindingResult);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("Failed to create MethodParameter", e);
+            }
         }
     }
 

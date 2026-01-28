@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
 import {
-  register,
-  setAuthToken,
   clearAuthToken,
   getAuthToken,
   isAuthenticated,
   parseAuthError,
+  register,
+  setAuthToken,
 } from './auth'
 
 // Mock the api module

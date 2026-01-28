@@ -1,12 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@/test/test-utils'
 
 // Mock TanStack Router
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => () => ({ component: () => null }),
-  Link: ({ children, to, className }: { children: React.ReactNode; to: string; className?: string }) => (
+  Link: ({
+    children,
+    to,
+    className,
+  }: {
+    children: React.ReactNode
+    to: string
+    className?: string
+  }) => (
     <a href={to} className={className}>
       {children}
     </a>
