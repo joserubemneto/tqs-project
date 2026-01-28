@@ -15,7 +15,10 @@ RUN mvn dependency:go-offline -B
 # Copy source code into the image
 COPY src ./src
 
+# Compile the project to ensure all plugin dependencies are available
+RUN mvn compile -DskipTests -B
+
 EXPOSE 8080
 
-# Run Spring Boot
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]
+# Run Spring Boot with shell form to allow env var substitution
+CMD mvn spring-boot:run -Dspring-boot.run.fork=false

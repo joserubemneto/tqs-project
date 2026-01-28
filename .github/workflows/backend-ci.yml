@@ -63,7 +63,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Cucumber reports to Xray Cloud
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: always()
         env:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
@@ -102,7 +102,7 @@ jobs:
           echo "Xray response: $RESPONSE"
 
       - name: Upload JUnit results to Xray Cloud
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: always()
         env:
           XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
           XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
