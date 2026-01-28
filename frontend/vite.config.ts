@@ -4,6 +4,9 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+// API URL for proxy - defaults to localhost for local dev, can be overridden for Docker
+const API_URL = process.env.VITE_API_PROXY_TARGET || 'http://localhost:8080'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -24,7 +27,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: API_URL,
         changeOrigin: true,
       },
     },

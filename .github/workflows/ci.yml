@@ -14,6 +14,7 @@ jobs:
   backend:
     name: Backend - Build & Test
     uses: ./.github/workflows/backend-ci.yml
+    secrets: inherit
 
   # SonarCloud Analysis
   sonar:

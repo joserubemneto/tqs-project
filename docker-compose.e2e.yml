@@ -58,7 +58,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_URL: http://localhost:8080
+      # Proxy target for Vite dev server (uses Docker service name)
+      VITE_API_PROXY_TARGET: http://backend-e2e:8080
     depends_on:
       backend-e2e:
         condition: service_healthy
