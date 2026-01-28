@@ -7,7 +7,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # Flyway manages schema, Hibernate validates
+      ddl-auto: none  # Flyway manages schema completely
     show-sql: false
     properties:
       hibernate:
@@ -19,7 +19,6 @@ spring:
     locations: classpath:db/migration/h2
     baseline-on-migrate: true
     clean-disabled: false
-    clean-on-validation-error: true
 
 jwt:
   secret: test-secret-key-for-testing-purposes-only-minimum-256-bits-required-here
