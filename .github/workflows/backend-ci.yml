@@ -143,16 +143,13 @@ jobs:
             exit 1
           fi
           
-          # Create import info JSON specifying Generic (automated) test type
+          # Create import info JSON for Test Execution
           cat > /tmp/xray-info.json << 'EOF'
           {
             "fields": {
               "project": { "key": "SCRUM" },
               "summary": "CI Test Execution - Backend Unit Tests",
               "issuetype": { "name": "Test Execution" }
-            },
-            "xrayFields": {
-              "testType": "Generic"
             }
           }
           EOF

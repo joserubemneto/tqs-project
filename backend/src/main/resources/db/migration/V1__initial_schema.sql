@@ -4,8 +4,8 @@
 -- This migration creates all base tables, indexes, and constraints
 -- =============================================================================
 
--- Wrap in transaction for atomicity (PostgreSQL supports transactional DDL)
-BEGIN;
+-- Note: Flyway automatically wraps migrations in transactions for PostgreSQL
+-- Do NOT use explicit BEGIN/COMMIT as it conflicts with Flyway's transaction management
 
 -- =============================================================================
 -- SKILLS TABLE
@@ -213,5 +213,3 @@ CREATE TABLE IF NOT EXISTS redemptions (
 CREATE INDEX idx_redemptions_user ON redemptions(user_id);
 CREATE INDEX idx_redemptions_reward ON redemptions(reward_id);
 CREATE INDEX idx_redemptions_code ON redemptions(code);
-
-COMMIT;

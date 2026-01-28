@@ -10,11 +10,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # Only validate schema - Flyway manages migrations
+      # Default to 'none' - Flyway manages schema creation
+      # Set to 'validate' in production after migrations are verified
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # PostgreSQL dialect is auto-detected, no need to specify
         format_sql: true
 
   # Flyway Database Migrations
@@ -25,8 +27,6 @@ spring:
     baseline-version: '0'
     validate-on-migrate: true
     out-of-order: false
-    # Group migrations in a transaction (PostgreSQL supports transactional DDL)
-    group: true
 
   jackson:
     default-property-inclusion: non_null
