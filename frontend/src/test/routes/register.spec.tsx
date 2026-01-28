@@ -5,7 +5,7 @@ import { render, screen } from '@/test/test-utils'
 // Mock TanStack Router
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: (path: string) => (options: { component: React.ComponentType }) => ({
+  createFileRoute: (_path: string) => (options: { component: React.ComponentType }) => ({
     ...options,
     options,
   }),
@@ -37,7 +37,7 @@ vi.mock('@/components/auth/RegisterForm', () => ({
 }))
 
 // Import after mocks are set up
-import { Route } from './register'
+import { Route } from '@/routes/register'
 
 // Get the component from the route
 const RegisterPage = Route.options.component as React.ComponentType
