@@ -5,7 +5,10 @@ import { render, screen } from '@/test/test-utils'
 // Mock TanStack Router
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: () => () => ({ component: () => null }),
+  createFileRoute: (path: string) => (options: { component: React.ComponentType }) => ({
+    ...options,
+    options,
+  }),
   Link: ({
     children,
     to,
@@ -37,7 +40,7 @@ vi.mock('@/components/auth/RegisterForm', () => ({
 import { Route } from './register'
 
 // Get the component from the route
-const RegisterPage = Route.options.component
+const RegisterPage = Route.options.component as React.ComponentType
 
 describe('RegisterPage', () => {
   beforeEach(() => {

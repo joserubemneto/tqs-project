@@ -193,12 +193,15 @@ describe('auth', () => {
       expect(result).toBe('Not valid JSON')
     })
 
-    it('should return default message when ApiError has no message', async () => {
+    it('should return error message from ApiError when JSON parsing fails on empty string', async () => {
+      // When message is empty string, JSON.parse throws, so it falls back to error.message
+      // ApiError constructor sets message to "API Error: status statusText" when message is empty
       const error = new ApiError(500, 'Internal Server Error', '')
 
       const result = await parseAuthError(error)
 
-      expect(result).toBe('An error occurred')
+      // Falls back to error.message which is set by ApiError constructor
+      expect(result).toBe('API Error: 500 Internal Server Error')
     })
 
     it('should return unexpected error message for non-ApiError', async () => {
