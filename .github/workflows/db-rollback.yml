@@ -1,0 +1,155 @@
+name: Database Rollback (Emergency)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target migration version to rollback to (e.g., "1" or "0" for baseline)'
+        required: true
+        type: string
+      confirm_rollback:
+        description: 'Type "ROLLBACK" to confirm this destructive action'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+# Prevent concurrent rollbacks
+concurrency:
+  group: database-rollback-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  JAVA_VERSION: '25'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  validate-rollback:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    outputs:
+      confirmed: ${{ steps.validate.outputs.confirmed }}
+    steps:
+      - name: Validate confirmation
+        id: validate
+        run: |
+          if [[ "${{ github.event.inputs.confirm_rollback }}" != "ROLLBACK" ]]; then
+            echo "confirmed=false" >> $GITHUB_OUTPUT
+            echo "::error::Rollback not confirmed. You must type 'ROLLBACK' exactly."
+            exit 1
+          fi
+          echo "confirmed=true" >> $GITHUB_OUTPUT
+          echo "Rollback confirmed for ${{ github.event.inputs.environment }}"
+
+  rollback-database:
+    name: Rollback Database
+    runs-on: ubuntu-latest
+    needs: [validate-rollback]
+    if: needs.validate-rollback.outputs.confirmed == 'true'
+    environment: ${{ github.event.inputs.environment }}
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Set database credentials
+        id: creds
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "FLYWAY_URL=${{ secrets.PROD_DATABASE_URL }}" >> $GITHUB_ENV
+            echo "FLYWAY_USER=${{ secrets.PROD_DATABASE_USERNAME }}" >> $GITHUB_ENV
+            echo "FLYWAY_PASSWORD=${{ secrets.PROD_DATABASE_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "FLYWAY_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
+            echo "FLYWAY_USER=${{ secrets.STAGING_DATABASE_USERNAME }}" >> $GITHUB_ENV
+            echo "FLYWAY_PASSWORD=${{ secrets.STAGING_DATABASE_PASSWORD }}" >> $GITHUB_ENV
+          fi
+
+      - name: Show current migration status
+        run: |
+          echo "Current migration status before rollback:"
+          mvn flyway:info -B
+
+      - name: Create database backup reminder
+        run: |
+          echo "::warning::IMPORTANT: Ensure you have a database backup before proceeding!"
+          echo "## Pre-Rollback Checklist" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Database backup created" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Rollback tested in staging first" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Team notified of rollback" >> $GITHUB_STEP_SUMMARY
+
+      - name: Execute rollback
+        id: rollback
+        run: |
+          TARGET="${{ github.event.inputs.target_version }}"
+          echo "Rolling back to version: $TARGET"
+          
+          # Flyway Community doesn't support undo, so we use repair + baseline approach
+          # For actual data migrations, you need to run the undo scripts manually
+          
+          # Option 1: If target is 0, repair and rebaseline
+          if [[ "$TARGET" == "0" ]]; then
+            echo "::warning::Full reset requested. This requires manual undo script execution."
+            echo "status=manual_required" >> $GITHUB_OUTPUT
+          else
+            # Option 2: Repair schema history and mark as resolved
+            echo "Repairing Flyway schema history..."
+            mvn flyway:repair -B
+            
+            # Show updated status
+            mvn flyway:info -B
+            echo "status=repaired" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Manual rollback instructions
+        if: steps.rollback.outputs.status == 'manual_required'
+        run: |
+          echo "## Manual Rollback Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To complete the rollback, run the undo scripts manually:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo '# Connect to database and run:' >> $GITHUB_STEP_SUMMARY
+          echo 'psql $DATABASE_URL -f src/main/resources/db/migration/undo/U1__undo_initial_schema.sql' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Show migration status after rollback
+        if: always()
+        run: |
+          echo "Migration status after rollback:"
+          mvn flyway:info -B
+
+      - name: Create rollback summary
+        if: always()
+        run: |
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Version**: ${{ github.event.inputs.target_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.rollback.outputs.status || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY

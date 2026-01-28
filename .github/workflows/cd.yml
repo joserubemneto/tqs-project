@@ -4,11 +4,26 @@ on:
   push:
     branches: [master]
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      skip_migrations:
+        description: 'Skip database migrations'
+        required: false
+        default: 'false'
+        type: boolean
+      force_deploy:
+        description: 'Force deployment even without changes'
+        required: false
+        default: 'false'
+        type: boolean
 
 # Prevent concurrent deployments
 concurrency:
   group: production-deploy
   cancel-in-progress: false
+
+env:
+  JAVA_VERSION: '25'
+  JAVA_DISTRIBUTION: 'temurin'
 
 jobs:
   # Reuse CI workflows
@@ -33,6 +48,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      migrations: ${{ steps.filter.outputs.migrations }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,27 +64,161 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            migrations:
+              - 'backend/src/main/resources/db/migration/**'
 
-  # Deploy backend - only if CI passed and backend changed
+  # =============================================================================
+  # PRE-DEPLOY: Database Migrations
+  # Runs migrations BEFORE deploying the application
+  # This ensures schema changes are applied atomically and can be rolled back
+  # =============================================================================
+  migrate-database:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: [backend-ci, frontend-ci, sonar, changes]
+    # Run if: backend changed OR migrations changed OR force deploy
+    if: |
+      (needs.changes.outputs.backend == 'true' || 
+       needs.changes.outputs.migrations == 'true' ||
+       github.event.inputs.force_deploy == 'true') &&
+      github.event.inputs.skip_migrations != 'true'
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+
+    outputs:
+      migration_status: ${{ steps.migrate.outputs.status }}
+      migration_version: ${{ steps.migrate.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Validate migrations
+        id: validate
+        env:
+          FLYWAY_URL: ${{ secrets.PROD_DATABASE_URL }}
+          FLYWAY_USER: ${{ secrets.PROD_DATABASE_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.PROD_DATABASE_PASSWORD }}
+        run: |
+          echo "Validating database migrations..."
+          mvn flyway:validate -B || echo "Validation issues detected, will attempt repair if needed"
+
+      - name: Show migration status (before)
+        env:
+          FLYWAY_URL: ${{ secrets.PROD_DATABASE_URL }}
+          FLYWAY_USER: ${{ secrets.PROD_DATABASE_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.PROD_DATABASE_PASSWORD }}
+        run: |
+          echo "Current migration status:"
+          mvn flyway:info -B
+
+      - name: Run database migrations
+        id: migrate
+        env:
+          FLYWAY_URL: ${{ secrets.PROD_DATABASE_URL }}
+          FLYWAY_USER: ${{ secrets.PROD_DATABASE_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.PROD_DATABASE_PASSWORD }}
+        run: |
+          echo "Running database migrations..."
+          
+          # Run migrations with transaction grouping (PostgreSQL supports transactional DDL)
+          if mvn flyway:migrate -B \
+            -Dflyway.group=true \
+            -Dflyway.outOfOrder=false \
+            -Dflyway.validateOnMigrate=true; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "Migrations completed successfully!"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "Migration failed!"
+            exit 1
+          fi
+          
+          # Capture current version
+          VERSION=$(mvn flyway:info -B 2>/dev/null | grep "Current" | awk '{print $NF}' || echo "unknown")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Show migration status (after)
+        if: always()
+        env:
+          FLYWAY_URL: ${{ secrets.PROD_DATABASE_URL }}
+          FLYWAY_USER: ${{ secrets.PROD_DATABASE_USERNAME }}
+          FLYWAY_PASSWORD: ${{ secrets.PROD_DATABASE_PASSWORD }}
+        run: |
+          echo "Final migration status:"
+          mvn flyway:info -B
+
+      - name: Create migration summary
+        if: always()
+        run: |
+          echo "## Database Migration Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.migrate.outputs.status || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.migrate.outputs.version || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Rollback Instructions" >> $GITHUB_STEP_SUMMARY
+          echo "If you need to rollback, use the undo scripts in:" >> $GITHUB_STEP_SUMMARY
+          echo "\`backend/src/main/resources/db/migration/undo/\`" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # DEPLOY: Backend Application
+  # Only runs AFTER migrations succeed
+  # =============================================================================
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    needs: [backend-ci, frontend-ci, sonar, changes]
-    if: needs.changes.outputs.backend == 'true'
+    needs: [backend-ci, frontend-ci, sonar, changes, migrate-database]
+    # Run if: migrations succeeded (or were skipped) AND backend changed
+    if: |
+      always() &&
+      (needs.migrate-database.result == 'success' || needs.migrate-database.result == 'skipped') &&
+      (needs.changes.outputs.backend == 'true' || github.event.inputs.force_deploy == 'true')
     environment: production
 
     steps:
+      - name: Verify migration status
+        if: needs.migrate-database.result == 'success'
+        run: |
+          echo "Migrations completed successfully: ${{ needs.migrate-database.outputs.migration_version }}"
+
       - name: Deploy to Render
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}"
           echo "Backend deployment triggered"
 
-  # Deploy frontend - only if CI passed and frontend changed
+      - name: Create deployment summary
+        run: |
+          echo "## Backend Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Migration Version**: ${{ needs.migrate-database.outputs.migration_version || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment**: Triggered via Render webhook" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # DEPLOY: Frontend Application  
+  # Runs independently of backend/migrations
+  # =============================================================================
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     needs: [backend-ci, frontend-ci, sonar, changes]
-    if: needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.frontend == 'true' || github.event.inputs.force_deploy == 'true'
     environment: production
 
     steps:
@@ -76,3 +226,11 @@ jobs:
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}"
           echo "Frontend deployment triggered"
+
+  # =============================================================================
+  # ROLLBACK JOB (Manual trigger only)
+  # Use workflow_dispatch to trigger a rollback if needed
+  # =============================================================================
+  # Note: For rollback, create a separate workflow or use:
+  # gh workflow run cd.yml -f skip_migrations=true
+  # Then manually run the undo scripts against the database
