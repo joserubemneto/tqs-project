@@ -73,9 +73,8 @@ describe('opportunity', () => {
 
       const result = await getOpportunities()
 
-      expect(api.get).toHaveBeenCalledWith('/opportunities', {
-        params: undefined,
-      })
+      // When no params are provided, api.get is called without the second argument
+      expect(api.get).toHaveBeenCalledWith('/opportunities')
       expect(result).toEqual(mockPageResponse)
     })
 
@@ -90,6 +89,10 @@ describe('opportunity', () => {
           size: 20,
           sortBy: undefined,
           sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
         },
       })
     })
@@ -105,6 +108,10 @@ describe('opportunity', () => {
           size: undefined,
           sortBy: 'startDate',
           sortDir: 'desc',
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
         },
       })
     })
@@ -125,6 +132,196 @@ describe('opportunity', () => {
           size: 15,
           sortBy: 'title',
           sortDir: 'asc',
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with skillIds filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ skillIds: [1, 2, 3] })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
+          skillIds: [1, 2, 3],
+        },
+      })
+    })
+
+    it('should call api.get with minPoints filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ minPoints: 50 })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: 50,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with maxPoints filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ maxPoints: 200 })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: 200,
+          startDateFrom: undefined,
+          startDateTo: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with points range filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ minPoints: 50, maxPoints: 200 })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: 50,
+          maxPoints: 200,
+          startDateFrom: undefined,
+          startDateTo: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with startDateFrom filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ startDateFrom: '2024-02-01T00:00:00' })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: '2024-02-01T00:00:00',
+          startDateTo: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with startDateTo filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ startDateTo: '2024-03-01T00:00:00' })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: '2024-03-01T00:00:00',
+        },
+      })
+    })
+
+    it('should call api.get with date range filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({
+        startDateFrom: '2024-02-01T00:00:00',
+        startDateTo: '2024-03-01T00:00:00',
+      })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: '2024-02-01T00:00:00',
+          startDateTo: '2024-03-01T00:00:00',
+        },
+      })
+    })
+
+    it('should call api.get with all filters combined', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({
+        page: 0,
+        size: 10,
+        sortBy: 'pointsReward',
+        sortDir: 'desc',
+        skillIds: [1, 2],
+        minPoints: 50,
+        maxPoints: 200,
+        startDateFrom: '2024-02-01T00:00:00',
+        startDateTo: '2024-03-01T00:00:00',
+      })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: 0,
+          size: 10,
+          sortBy: 'pointsReward',
+          sortDir: 'desc',
+          minPoints: 50,
+          maxPoints: 200,
+          startDateFrom: '2024-02-01T00:00:00',
+          startDateTo: '2024-03-01T00:00:00',
+          skillIds: [1, 2],
+        },
+      })
+    })
+
+    it('should not include skillIds in params when array is empty', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getOpportunities({ skillIds: [] })
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+          minPoints: undefined,
+          maxPoints: undefined,
+          startDateFrom: undefined,
+          startDateTo: undefined,
         },
       })
     })

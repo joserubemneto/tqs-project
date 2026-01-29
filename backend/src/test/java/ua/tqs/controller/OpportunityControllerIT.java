@@ -688,5 +688,368 @@ class OpportunityControllerIT {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content.length()").value(1));
         }
+
+        @Test
+        @DisplayName("should filter opportunities by skill ID")
+        void shouldFilterOpportunitiesBySkillId() throws Exception {
+            Set<Skill> communicationSkills = new HashSet<>();
+            communicationSkills.add(communicationSkill);
+
+            Set<Skill> leadershipSkills = new HashSet<>();
+            leadershipSkills.add(leadershipSkill);
+
+            // Create opportunity with communication skill
+            Opportunity commOpportunity = Opportunity.builder()
+                    .title("Communication Opportunity")
+                    .description("Needs communication skills")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(communicationSkills)
+                    .build();
+            opportunityRepository.save(commOpportunity);
+
+            // Create opportunity with leadership skill
+            Opportunity leaderOpportunity = Opportunity.builder()
+                    .title("Leadership Opportunity")
+                    .description("Needs leadership skills")
+                    .pointsReward(75)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(leadershipSkills)
+                    .build();
+            opportunityRepository.save(leaderOpportunity);
+
+            // Filter by communication skill
+            mockMvc.perform(get("/api/opportunities")
+                    .param("skillIds", communicationSkill.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Communication Opportunity"));
+
+            // Filter by leadership skill
+            mockMvc.perform(get("/api/opportunities")
+                    .param("skillIds", leadershipSkill.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Leadership Opportunity"));
+        }
+
+        @Test
+        @DisplayName("should filter opportunities by multiple skill IDs")
+        void shouldFilterOpportunitiesByMultipleSkillIds() throws Exception {
+            Set<Skill> communicationSkills = new HashSet<>();
+            communicationSkills.add(communicationSkill);
+
+            Set<Skill> leadershipSkills = new HashSet<>();
+            leadershipSkills.add(leadershipSkill);
+
+            // Create opportunities
+            Opportunity commOpportunity = Opportunity.builder()
+                    .title("Communication Opportunity")
+                    .description("Needs communication skills")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(communicationSkills)
+                    .build();
+            opportunityRepository.save(commOpportunity);
+
+            Opportunity leaderOpportunity = Opportunity.builder()
+                    .title("Leadership Opportunity")
+                    .description("Needs leadership skills")
+                    .pointsReward(75)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(leadershipSkills)
+                    .build();
+            opportunityRepository.save(leaderOpportunity);
+
+            // Filter by both skills (should return both - OR logic)
+            mockMvc.perform(get("/api/opportunities")
+                    .param("skillIds", communicationSkill.getId().toString())
+                    .param("skillIds", leadershipSkill.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(2));
+        }
+
+        @Test
+        @DisplayName("should filter opportunities by minimum points")
+        void shouldFilterOpportunitiesByMinPoints() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create opportunity with low points
+            Opportunity lowPointsOpp = Opportunity.builder()
+                    .title("Low Points Opportunity")
+                    .description("Low points")
+                    .pointsReward(20)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(lowPointsOpp);
+
+            // Create opportunity with high points
+            Opportunity highPointsOpp = Opportunity.builder()
+                    .title("High Points Opportunity")
+                    .description("High points")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(highPointsOpp);
+
+            // Filter by minimum 50 points
+            mockMvc.perform(get("/api/opportunities")
+                    .param("minPoints", "50"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("High Points Opportunity"));
+        }
+
+        @Test
+        @DisplayName("should filter opportunities by maximum points")
+        void shouldFilterOpportunitiesByMaxPoints() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create opportunity with low points
+            Opportunity lowPointsOpp = Opportunity.builder()
+                    .title("Low Points Opportunity")
+                    .description("Low points")
+                    .pointsReward(20)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(lowPointsOpp);
+
+            // Create opportunity with high points
+            Opportunity highPointsOpp = Opportunity.builder()
+                    .title("High Points Opportunity")
+                    .description("High points")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(highPointsOpp);
+
+            // Filter by maximum 50 points
+            mockMvc.perform(get("/api/opportunities")
+                    .param("maxPoints", "50"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Low Points Opportunity"));
+        }
+
+        @Test
+        @DisplayName("should filter opportunities by points range")
+        void shouldFilterOpportunitiesByPointsRange() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create opportunities with different points
+            Opportunity lowOpp = Opportunity.builder()
+                    .title("Low Points")
+                    .description("Low")
+                    .pointsReward(20)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(lowOpp);
+
+            Opportunity midOpp = Opportunity.builder()
+                    .title("Mid Points")
+                    .description("Mid")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(midOpp);
+
+            Opportunity highOpp = Opportunity.builder()
+                    .title("High Points")
+                    .description("High")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(3))
+                    .endDate(LocalDateTime.now().plusDays(9))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(highOpp);
+
+            // Filter by points range 30-80
+            mockMvc.perform(get("/api/opportunities")
+                    .param("minPoints", "30")
+                    .param("maxPoints", "80"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Mid Points"));
+        }
+
+        @Test
+        @DisplayName("should filter opportunities by start date from")
+        void shouldFilterOpportunitiesByStartDateFrom() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create opportunity starting soon
+            Opportunity earlyOpp = Opportunity.builder()
+                    .title("Early Start")
+                    .description("Starts soon")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(5))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(earlyOpp);
+
+            // Create opportunity starting later
+            Opportunity lateOpp = Opportunity.builder()
+                    .title("Late Start")
+                    .description("Starts later")
+                    .pointsReward(75)
+                    .startDate(LocalDateTime.now().plusDays(30))
+                    .endDate(LocalDateTime.now().plusDays(35))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(lateOpp);
+
+            // Filter by start date from 15 days from now
+            String startDateFrom = LocalDateTime.now().plusDays(15).toString();
+            mockMvc.perform(get("/api/opportunities")
+                    .param("startDateFrom", startDateFrom))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Late Start"));
+        }
+
+        @Test
+        @DisplayName("should apply multiple filters together")
+        void shouldApplyMultipleFiltersTogether() throws Exception {
+            Set<Skill> communicationSkills = new HashSet<>();
+            communicationSkills.add(communicationSkill);
+
+            Set<Skill> leadershipSkills = new HashSet<>();
+            leadershipSkills.add(leadershipSkill);
+
+            // Create various opportunities
+            Opportunity opp1 = Opportunity.builder()
+                    .title("Comm Low Points")
+                    .description("Communication, low points")
+                    .pointsReward(20)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(communicationSkills)
+                    .build();
+            opportunityRepository.save(opp1);
+
+            Opportunity opp2 = Opportunity.builder()
+                    .title("Comm High Points")
+                    .description("Communication, high points")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(8))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(communicationSkills)
+                    .build();
+            opportunityRepository.save(opp2);
+
+            Opportunity opp3 = Opportunity.builder()
+                    .title("Leader High Points")
+                    .description("Leadership, high points")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(3))
+                    .endDate(LocalDateTime.now().plusDays(9))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(leadershipSkills)
+                    .build();
+            opportunityRepository.save(opp3);
+
+            // Filter by communication skill AND minimum 50 points
+            mockMvc.perform(get("/api/opportunities")
+                    .param("skillIds", communicationSkill.getId().toString())
+                    .param("minPoints", "50"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Comm High Points"));
+        }
+
+        @Test
+        @DisplayName("should return empty when no opportunities match filters")
+        void shouldReturnEmptyWhenNoMatchingFilters() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            Opportunity opportunity = Opportunity.builder()
+                    .title("Test Opportunity")
+                    .description("Test")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(opportunity);
+
+            // Filter by points that don't match
+            mockMvc.perform(get("/api/opportunities")
+                    .param("minPoints", "1000"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(0))
+                    .andExpect(jsonPath("$.totalElements").value(0));
+        }
     }
 }

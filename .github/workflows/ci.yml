@@ -22,62 +22,9 @@ jobs:
     uses: ./.github/workflows/sonarcloud.yml
     secrets: inherit
 
-  # E2E Tests - runs only after all checks pass
+  # E2E Tests - runs all e2e tests with full backend stack
   e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
-    needs: [frontend, backend, sonar]
-    defaults:
-      run:
-        working-directory: frontend
-
-    env:
-      NODE_VERSION: '24'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: pnpm test:e2e --project=chromium
-
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: frontend/playwright-report/
-          retention-days: 7
-
-      - name: Upload test screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-screenshots
-          path: frontend/test-results/
-          retention-days: 7
-
-  # E2E Integration Tests - runs only after all checks pass
-  e2e-integration:
-    name: E2E Integration Tests
     runs-on: ubuntu-latest
     needs: [frontend, backend, sonar]
 
@@ -123,7 +70,7 @@ jobs:
           timeout 60 bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 2; echo "Waiting for frontend..."; done'
           echo "Frontend is ready!"
 
-      - name: Run E2E integration tests
+      - name: Run E2E tests
         working-directory: frontend
         run: pnpm test:e2e:integration --project=chromium
 
@@ -131,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-integration-report
+          name: playwright-report
           path: frontend/playwright-report/
           retention-days: 7
 
@@ -139,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-integration-screenshots
+          name: playwright-screenshots
           path: frontend/test-results/
           retention-days: 7
 
@@ -178,7 +125,7 @@ jobs:
           {
             "fields": {
               "project": { "key": "$JIRA_PROJECT_KEY" },
-              "summary": "CI Test Execution - E2E Integration Tests (Playwright)",
+              "summary": "CI Test Execution - E2E Tests (Playwright)",
               "issuetype": { "name": "Test Execution" }
             }
           }
@@ -195,13 +142,22 @@ jobs:
       - name: Show Docker logs on failure
         if: failure()
         run: |
-          echo "=== Backend logs ==="
-          docker compose -f docker-compose.e2e.yml logs backend-e2e
-          echo "=== Frontend logs ==="
-          docker compose -f docker-compose.e2e.yml logs frontend-e2e
-          echo "=== Database logs ==="
-          docker compose -f docker-compose.e2e.yml logs postgres-e2e
+          if [ -f docker-compose.e2e.yml ]; then
+            echo "=== Backend logs ==="
+            docker compose -f docker-compose.e2e.yml logs backend-e2e
+            echo "=== Frontend logs ==="
+            docker compose -f docker-compose.e2e.yml logs frontend-e2e
+            echo "=== Database logs ==="
+            docker compose -f docker-compose.e2e.yml logs postgres-e2e
+          else
+            echo "docker-compose.e2e.yml not found, skipping log collection"
+          fi
 
       - name: Cleanup Docker Compose
         if: always()
-        run: docker compose -f docker-compose.e2e.yml down -v
+        run: |
+          if [ -f docker-compose.e2e.yml ]; then
+            docker compose -f docker-compose.e2e.yml down -v
+          else
+            echo "docker-compose.e2e.yml not found, skipping cleanup"
+          fi

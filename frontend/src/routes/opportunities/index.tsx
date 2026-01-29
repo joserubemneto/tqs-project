@@ -5,6 +5,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Filter,
   Loader2,
   MapPin,
   RefreshCw,
@@ -12,8 +13,13 @@ import {
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
+import { OpportunityFilters } from '@/components/opportunity/OpportunityFilters'
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
-import { getOpportunities, type OpportunityResponse } from '@/lib/opportunity'
+import {
+  type OpportunityFilters as Filters,
+  getOpportunities,
+  type OpportunityResponse,
+} from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/')({
   component: OpportunitiesPage,
@@ -23,6 +29,12 @@ const PAGE_SIZE = 10
 
 function OpportunitiesPage() {
   const [page, setPage] = useState(0)
+  const [filters, setFilters] = useState<Filters>({})
+
+  const handleFiltersChange = (newFilters: Filters) => {
+    setFilters(newFilters)
+    setPage(0) // Reset to first page when filters change
+  }
 
   const {
     data: opportunitiesData,
@@ -31,15 +43,23 @@ function OpportunitiesPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['opportunities', page],
+    queryKey: ['opportunities', page, filters],
     queryFn: () =>
       getOpportunities({
         page,
         size: PAGE_SIZE,
         sortBy: 'startDate',
         sortDir: 'asc',
+        ...filters,
       }),
   })
+
+  const hasActiveFilters =
+    (filters.skillIds && filters.skillIds.length > 0) ||
+    filters.startDateFrom ||
+    filters.startDateTo ||
+    filters.minPoints !== undefined ||
+    filters.maxPoints !== undefined
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -50,6 +70,9 @@ function OpportunitiesPage() {
           Browse available opportunities and find one that matches your skills
         </p>
       </div>
+
+      {/* Filters */}
+      <OpportunityFilters filters={filters} onFiltersChange={handleFiltersChange} />
 
       {/* Loading State */}
       {isLoading && (
@@ -78,16 +101,34 @@ function OpportunitiesPage() {
         !isLoading &&
         !isError &&
         (opportunitiesData.content.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12" data-testid="empty-state">
             <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-              <Calendar className="h-12 w-12 text-muted-foreground" />
+              {hasActiveFilters ? (
+                <Filter className="h-12 w-12 text-muted-foreground" />
+              ) : (
+                <Calendar className="h-12 w-12 text-muted-foreground" />
+              )}
             </div>
             <p className="text-muted-foreground text-lg">
-              No opportunities available at the moment
+              {hasActiveFilters
+                ? 'No opportunities match your filters'
+                : 'No opportunities available at the moment'}
             </p>
             <p className="text-muted-foreground text-sm mt-2">
-              Check back later for new volunteering opportunities
+              {hasActiveFilters
+                ? 'Try adjusting your filter criteria'
+                : 'Check back later for new volunteering opportunities'}
             </p>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={() => handleFiltersChange({})}
+                className="mt-4"
+                data-testid="clear-filters-empty"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         ) : (
           <>

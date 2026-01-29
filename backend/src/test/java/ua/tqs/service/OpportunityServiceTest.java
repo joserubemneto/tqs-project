@@ -12,7 +12,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
@@ -562,6 +564,179 @@ class OpportunityServiceTest {
             // Assert
             assertThat(result.getContent()).hasSize(2);
             assertThat(result.getTotalElements()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("getFilteredOpportunities()")
+    class GetFilteredOpportunitiesMethod {
+
+        private Opportunity openOpportunity;
+
+        @BeforeEach
+        void setUpOpenOpportunity() {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            openOpportunity = Opportunity.builder()
+                    .id(2L)
+                    .title("Open Opportunity")
+                    .description("An open opportunity for volunteers")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(5))
+                    .endDate(LocalDateTime.now().plusDays(10))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoter)
+                    .requiredSkills(skills)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return opportunities without filters")
+        @SuppressWarnings("unchecked")
+        void shouldReturnOpportunitiesWithoutFilters() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(null, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getTitle()).isEqualTo("Open Opportunity");
+        }
+
+        @Test
+        @DisplayName("should return opportunities with empty filter")
+        @SuppressWarnings("unchecked")
+        void shouldReturnOpportunitiesWithEmptyFilter() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            OpportunityFilterRequest emptyFilter = new OpportunityFilterRequest();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(emptyFilter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should filter by skill IDs")
+        @SuppressWarnings("unchecked")
+        void shouldFilterBySkillIds() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                    .skillIds(List.of(1L))
+                    .build();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            verify(opportunityRepository).findAll(any(Specification.class), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("should filter by date range")
+        @SuppressWarnings("unchecked")
+        void shouldFilterByDateRange() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                    .startDateFrom(LocalDateTime.now())
+                    .startDateTo(LocalDateTime.now().plusDays(30))
+                    .build();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            verify(opportunityRepository).findAll(any(Specification.class), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("should filter by points range")
+        @SuppressWarnings("unchecked")
+        void shouldFilterByPointsRange() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                    .minPoints(30)
+                    .maxPoints(100)
+                    .build();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            verify(opportunityRepository).findAll(any(Specification.class), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("should apply all filters together")
+        @SuppressWarnings("unchecked")
+        void shouldApplyAllFiltersTogether() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                    .skillIds(List.of(1L, 2L))
+                    .startDateFrom(LocalDateTime.now())
+                    .startDateTo(LocalDateTime.now().plusDays(30))
+                    .minPoints(20)
+                    .maxPoints(100)
+                    .build();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(filter.hasFilters()).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return empty page when no matches")
+        @SuppressWarnings("unchecked")
+        void shouldReturnEmptyPageWhenNoMatches() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                    .minPoints(1000)
+                    .build();
+            when(opportunityRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(emptyPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getFilteredOpportunities(filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
         }
     }
 }
