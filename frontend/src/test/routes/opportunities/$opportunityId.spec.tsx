@@ -36,6 +36,17 @@ vi.mock('@/lib/opportunity', async () => {
   }
 })
 
+// Mock useAuth hook
+const mockUseAuth = vi.fn()
+
+vi.mock('@/contexts/AuthContext', async () => {
+  const actual = await vi.importActual('@/contexts/AuthContext')
+  return {
+    ...actual,
+    useAuth: () => mockUseAuth(),
+  }
+})
+
 // Import after mocks are set up
 import { Route } from '@/routes/opportunities/$opportunityId'
 
@@ -80,6 +91,8 @@ const mockOpportunity: OpportunityResponse = {
 describe('OpportunityDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: no authenticated user
+    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false })
   })
 
   describe('Loading State', () => {
@@ -332,6 +345,144 @@ describe('OpportunityDetailPage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('opportunity-status')).toHaveTextContent('COMPLETED')
       })
+    })
+
+    it('should display IN_PROGRESS status correctly', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'IN_PROGRESS' })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-status')).toHaveTextContent('IN_PROGRESS')
+      })
+    })
+
+    it('should display CANCELLED status correctly', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'CANCELLED' })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-status')).toHaveTextContent('CANCELLED')
+      })
+    })
+  })
+
+  describe('Edit and Cancel buttons visibility', () => {
+    it('should show edit and cancel buttons for promoter owner with DRAFT status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-opportunity-button')).toBeInTheDocument()
+        expect(screen.getByTestId('cancel-opportunity-button')).toBeInTheDocument()
+      })
+    })
+
+    it('should show edit and cancel buttons for admin user', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'OPEN' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 999,
+          email: 'admin@ua.pt',
+          name: 'Admin User',
+          role: 'ADMIN',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-opportunity-button')).toBeInTheDocument()
+        expect(screen.getByTestId('cancel-opportunity-button')).toBeInTheDocument()
+      })
+    })
+
+    it('should not show edit/cancel buttons for non-owner', async () => {
+      mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 999,
+          email: 'other@ua.pt',
+          name: 'Other User',
+          role: 'VOLUNTEER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('edit-opportunity-button')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('cancel-opportunity-button')).not.toBeInTheDocument()
+    })
+
+    it('should not show edit button for COMPLETED status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'COMPLETED' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('edit-opportunity-button')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('cancel-opportunity-button')).not.toBeInTheDocument()
+    })
+
+    it('should show cancel button for FULL status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'FULL' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('cancel-opportunity-button')).toBeInTheDocument()
+      })
+
+      // Edit should not be available for FULL status
+      expect(screen.queryByTestId('edit-opportunity-button')).not.toBeInTheDocument()
     })
   })
 })

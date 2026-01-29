@@ -23,6 +23,7 @@ import ua.tqs.config.JwtUserDetails;
 import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.dto.UpdateOpportunityRequest;
 import ua.tqs.service.OpportunityService;
 
 import java.time.LocalDateTime;
@@ -124,5 +125,48 @@ public class OpportunityController {
     ) {
         List<OpportunityResponse> opportunities = opportunityService.getOpportunitiesByPromoter(currentUser.getUserId());
         return ResponseEntity.ok(opportunities);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('PROMOTER') or hasRole('ADMIN')")
+    @Operation(summary = "Update an opportunity", description = "Update an existing opportunity (owner or ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully updated opportunity"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Validation error or invalid status"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User does not own the opportunity"),
+            @ApiResponse(responseCode = "404", description = "Opportunity not found")
+    })
+    public ResponseEntity<OpportunityResponse> updateOpportunity(
+            @Parameter(description = "Opportunity ID")
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOpportunityRequest request,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+        OpportunityResponse response = opportunityService.updateOpportunity(
+                currentUser.getUserId(), id, request, isAdmin);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('PROMOTER') or hasRole('ADMIN')")
+    @Operation(summary = "Cancel an opportunity", description = "Cancel an existing opportunity (owner or ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully cancelled opportunity"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Invalid status for cancellation"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User does not own the opportunity"),
+            @ApiResponse(responseCode = "404", description = "Opportunity not found")
+    })
+    public ResponseEntity<OpportunityResponse> cancelOpportunity(
+            @Parameter(description = "Opportunity ID")
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+        OpportunityResponse response = opportunityService.cancelOpportunity(
+                currentUser.getUserId(), id, isAdmin);
+        return ResponseEntity.ok(response);
     }
 }

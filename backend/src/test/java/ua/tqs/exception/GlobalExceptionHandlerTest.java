@@ -284,6 +284,70 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleOpportunityStatus()")
+    class HandleOpportunityStatus {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            OpportunityStatusException exception = new OpportunityStatusException("Cannot edit opportunity in current status");
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityStatus(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("Cannot edit opportunity in current status");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Opportunity is already cancelled";
+            OpportunityStatusException exception = new OpportunityStatusException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityStatus(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleOpportunityOwnership()")
+    class HandleOpportunityOwnership {
+
+        @Test
+        @DisplayName("should return FORBIDDEN status with error message")
+        void shouldReturnForbiddenStatus() {
+            OpportunityOwnershipException exception = new OpportunityOwnershipException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityOwnership(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(403);
+            assertThat(response.getBody().getError()).isEqualTo("Forbidden");
+            assertThat(response.getBody().getMessage()).isEqualTo("Access denied");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "You do not own this opportunity";
+            OpportunityOwnershipException exception = new OpportunityOwnershipException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityOwnership(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleAccessDenied()")
     class HandleAccessDenied {
 

@@ -48,6 +48,21 @@ export interface CreateOpportunityRequest {
   requiredSkillIds: number[]
 }
 
+/**
+ * Data for updating an existing opportunity.
+ * All fields are optional - only provided fields will be updated.
+ */
+export interface UpdateOpportunityData {
+  title?: string
+  description?: string
+  pointsReward?: number
+  startDate?: string // ISO format
+  endDate?: string // ISO format
+  maxVolunteers?: number
+  location?: string
+  requiredSkillIds?: number[]
+}
+
 export interface OpportunityError {
   timestamp: string
   status: number
@@ -134,6 +149,23 @@ export async function getMyOpportunities(): Promise<OpportunityResponse[]> {
  */
 export async function getOpportunityById(id: number): Promise<OpportunityResponse> {
   return api.get<OpportunityResponse>(`/opportunities/${id}`)
+}
+
+/**
+ * Update an existing opportunity (owner or admin only)
+ */
+export async function updateOpportunity(
+  id: number,
+  data: UpdateOpportunityData,
+): Promise<OpportunityResponse> {
+  return api.put<OpportunityResponse>(`/opportunities/${id}`, data)
+}
+
+/**
+ * Cancel an opportunity (owner or admin only)
+ */
+export async function cancelOpportunity(id: number): Promise<OpportunityResponse> {
+  return api.post<OpportunityResponse>(`/opportunities/${id}/cancel`, {})
 }
 
 /**

@@ -1,6 +1,7 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import {
   Button,
+  buttonVariants,
   Card,
   CardContent,
   CardDescription,
@@ -17,40 +18,15 @@ import {
   parseOpportunityError,
 } from '@/lib/opportunity'
 import { getSkills, type SkillResponse } from '@/lib/profile'
+import {
+  FormField,
+  hasValidationErrors,
+  type OpportunityFormErrors,
+  validateOpportunityForm,
+} from './opportunity-form-utils'
 
 interface OpportunityFormProps {
   onSuccess?: (response: OpportunityResponse) => void
-}
-
-interface FormErrors {
-  title?: string
-  description?: string
-  pointsReward?: string
-  startDate?: string
-  endDate?: string
-  maxVolunteers?: string
-  skills?: string
-  general?: string
-}
-
-interface FormFieldProps {
-  id: string
-  label: string
-  required?: boolean
-  error?: string
-  children: ReactNode
-}
-
-function FormField({ id, label, required, error, children }: FormFieldProps) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id} required={required}>
-        {label}
-      </Label>
-      {children}
-      {error && <p className="text-sm text-error">{error}</p>}
-    </div>
-  )
 }
 
 export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
@@ -63,10 +39,11 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
   const [location, setLocation] = useState('')
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<number>>(new Set())
   const [availableSkills, setAvailableSkills] = useState<SkillResponse[]>([])
-  const [errors, setErrors] = useState<FormErrors>({})
+  const [errors, setErrors] = useState<OpportunityFormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingSkills, setIsLoadingSkills] = useState(true)
   const [successMessage, setSuccessMessage] = useState('')
+  const [createdOpportunityId, setCreatedOpportunityId] = useState<number | null>(null)
 
   // Load skills on mount
   useEffect(() => {
@@ -86,56 +63,18 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
   }, [])
 
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
-
-    if (!title.trim()) {
-      newErrors.title = 'Title is required'
-    } else if (title.length > 255) {
-      newErrors.title = 'Title must be at most 255 characters'
-    }
-
-    if (!description.trim()) {
-      newErrors.description = 'Description is required'
-    } else if (description.length > 2000) {
-      newErrors.description = 'Description must be at most 2000 characters'
-    }
-
-    const points = parseInt(pointsReward, 10)
-    if (!pointsReward) {
-      newErrors.pointsReward = 'Points reward is required'
-    } else if (Number.isNaN(points) || points < 0) {
-      newErrors.pointsReward = 'Points reward must be at least 0'
-    }
-
-    if (!startDate) {
-      newErrors.startDate = 'Start date is required'
-    }
-
-    if (!endDate) {
-      newErrors.endDate = 'End date is required'
-    }
-
-    if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      if (end <= start) {
-        newErrors.endDate = 'End date must be after start date'
-      }
-    }
-
-    const volunteers = parseInt(maxVolunteers, 10)
-    if (!maxVolunteers) {
-      newErrors.maxVolunteers = 'Max volunteers is required'
-    } else if (Number.isNaN(volunteers) || volunteers < 1) {
-      newErrors.maxVolunteers = 'Max volunteers must be at least 1'
-    }
-
-    if (selectedSkillIds.size === 0) {
-      newErrors.skills = 'At least one skill is required'
-    }
-
+    const newErrors = validateOpportunityForm({
+      title,
+      description,
+      pointsReward,
+      startDate,
+      endDate,
+      maxVolunteers,
+      location,
+      selectedSkillIds,
+    })
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return !hasValidationErrors(newErrors)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -162,6 +101,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
       })
 
       setSuccessMessage('Opportunity created successfully!')
+      setCreatedOpportunityId(response.id)
       onSuccess?.(response)
 
       // Reset form
@@ -213,9 +153,16 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
             </div>
           )}
 
-          {successMessage && (
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500 text-green-700 dark:text-green-400 text-sm">
-              {successMessage}
+          {successMessage && createdOpportunityId && (
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500 text-green-700 dark:text-green-400 text-sm flex items-center justify-between">
+              <span>{successMessage}</span>
+              <a
+                href={`/opportunities/${createdOpportunityId}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                data-testid="view-created-opportunity-link"
+              >
+                View Opportunity
+              </a>
             </div>
           )}
 

@@ -1,17 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   ArrowLeft,
   Calendar,
   Clock,
+  Edit,
   Loader2,
   MapPin,
   RefreshCw,
   Star,
+  Trash2,
   User,
   Users,
 } from 'lucide-react'
+import { useState } from 'react'
+import { CancelOpportunityDialog } from '@/components/opportunity/CancelOpportunityDialog'
+import { EditOpportunityModal } from '@/components/opportunity/EditOpportunityModal'
 import {
   Badge,
   Button,
@@ -21,7 +26,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
-import { getOpportunityById } from '@/lib/opportunity'
+import { useAuth } from '@/contexts/AuthContext'
+import { getOpportunityById, type OpportunityResponse } from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/$opportunityId')({
   component: OpportunityDetailPage,
@@ -30,6 +36,11 @@ export const Route = createFileRoute('/opportunities/$opportunityId')({
 function OpportunityDetailPage() {
   const { opportunityId } = Route.useParams()
   const id = parseInt(opportunityId, 10)
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
 
   const {
     data: opportunity,
@@ -42,6 +53,33 @@ function OpportunityDetailPage() {
     queryFn: () => getOpportunityById(id),
     enabled: !Number.isNaN(id),
   })
+
+  // Check if current user can edit/cancel this opportunity
+  const isOwner = user && opportunity && user.id === opportunity.promoter.id
+  const isAdmin = user?.role === 'ADMIN'
+  const canManage = isOwner || isAdmin
+
+  // Check if opportunity status allows editing (DRAFT or OPEN)
+  const canEdit =
+    canManage && opportunity && (opportunity.status === 'DRAFT' || opportunity.status === 'OPEN')
+
+  // Check if opportunity status allows cancellation (DRAFT, OPEN, or FULL)
+  const canCancel =
+    canManage &&
+    opportunity &&
+    (opportunity.status === 'DRAFT' ||
+      opportunity.status === 'OPEN' ||
+      opportunity.status === 'FULL')
+
+  const handleEditSuccess = (updatedOpportunity: OpportunityResponse) => {
+    // Update the cache with the new data
+    queryClient.setQueryData(['opportunity', id], updatedOpportunity)
+  }
+
+  const handleCancelSuccess = (cancelledOpportunity: OpportunityResponse) => {
+    // Update the cache with the new data
+    queryClient.setQueryData(['opportunity', id], cancelledOpportunity)
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -155,11 +193,39 @@ function OpportunityDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Back Button */}
-      <Link to="/opportunities" className={`${buttonVariants({ variant: 'ghost' })} mb-6`}>
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to opportunities
-      </Link>
+      {/* Header with Back Button and Actions */}
+      <div className="flex items-center justify-between mb-6">
+        <Link to="/opportunities" className={buttonVariants({ variant: 'ghost' })}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to opportunities
+        </Link>
+
+        {/* Edit/Cancel Actions */}
+        {canManage && (
+          <div className="flex gap-2">
+            {canEdit && (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditModalOpen(true)}
+                data-testid="edit-opportunity-button"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {canCancel && (
+              <Button
+                variant="destructive"
+                onClick={() => setIsCancelDialogOpen(true)}
+                data-testid="cancel-opportunity-button"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -317,6 +383,22 @@ function OpportunityDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <EditOpportunityModal
+        opportunity={opportunity}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Cancel Dialog */}
+      <CancelOpportunityDialog
+        opportunity={opportunity}
+        isOpen={isCancelDialogOpen}
+        onClose={() => setIsCancelDialogOpen(false)}
+        onSuccess={handleCancelSuccess}
+      />
     </div>
   )
 }

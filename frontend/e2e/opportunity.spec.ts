@@ -463,3 +463,454 @@ test.describe('View Opportunity Details', () => {
     })
   }
 })
+
+// E2E tests for Edit/Cancel Opportunity
+test.describe('Edit/Cancel Opportunity', () => {
+  const mockOpportunity = {
+    id: 1,
+    title: 'Test Opportunity',
+    description: 'Test description for the opportunity.',
+    pointsReward: 50,
+    startDate: '2024-02-01T09:00:00Z',
+    endDate: '2024-02-07T17:00:00Z',
+    maxVolunteers: 10,
+    status: 'DRAFT',
+    location: 'Test Location',
+    promoter: {
+      id: 1,
+      email: 'promoter@ua.pt',
+      name: 'Promoter',
+      role: 'PROMOTER',
+      points: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+    },
+    requiredSkills: [{ id: 1, name: 'Communication', category: 'COMMUNICATION', description: '' }],
+    createdAt: '2024-01-15T00:00:00Z',
+  }
+
+  const mockSkills = [
+    {
+      id: 1,
+      name: 'Communication',
+      category: 'COMMUNICATION',
+      description: 'Communication skills',
+    },
+    { id: 2, name: 'Leadership', category: 'LEADERSHIP', description: 'Leadership skills' },
+  ]
+
+  test.describe('Authorization - Edit/Cancel buttons visibility', () => {
+    test('should not show Edit/Cancel buttons when not authenticated', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      await page.goto('/')
+      await page.evaluate(() => localStorage.removeItem('auth_token'))
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).not.toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).not.toBeVisible()
+    })
+
+    test('should not show Edit/Cancel buttons for non-owner', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      // Set a different user (id: 2, not the owner id: 1)
+      const otherUserPayload = btoa(
+        JSON.stringify({ id: 2, email: 'other@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${otherUserPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).not.toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).not.toBeVisible()
+    })
+
+    test('should show Edit/Cancel buttons for owner', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      // Set the owner user (id: 1)
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).toBeVisible()
+    })
+
+    test('should show Edit/Cancel buttons for admin (non-owner)', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      // Set an admin user (different id)
+      const adminPayload = btoa(JSON.stringify({ id: 2, email: 'admin@ua.pt', role: 'ADMIN' }))
+      const mockToken = `header.${adminPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).toBeVisible()
+    })
+
+    test('should not show Edit button for IN_PROGRESS opportunity', async ({ page }) => {
+      const inProgressOpportunity = { ...mockOpportunity, status: 'IN_PROGRESS' }
+
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(inProgressOpportunity),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).not.toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).not.toBeVisible()
+    })
+
+    test('should not show Cancel button for CANCELLED opportunity', async ({ page }) => {
+      const cancelledOpportunity = { ...mockOpportunity, status: 'CANCELLED' }
+
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(cancelledOpportunity),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await expect(page.getByTestId('opportunity-title')).toBeVisible()
+      await expect(page.getByTestId('edit-opportunity-button')).not.toBeVisible()
+      await expect(page.getByTestId('cancel-opportunity-button')).not.toBeVisible()
+    })
+  })
+
+  test.describe('Edit Opportunity Modal', () => {
+    test('should open edit modal when Edit button is clicked', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+      await page.route('**/api/skills', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockSkills),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('edit-opportunity-button').click()
+
+      await expect(page.getByTestId('edit-modal-overlay')).toBeVisible()
+      await expect(page.getByTestId('edit-title-input')).toHaveValue('Test Opportunity')
+    })
+
+    test('should close edit modal when Cancel button is clicked', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+      await page.route('**/api/skills', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockSkills),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('edit-opportunity-button').click()
+      await expect(page.getByTestId('edit-modal-overlay')).toBeVisible()
+
+      await page.getByTestId('cancel-edit-button').click()
+      await expect(page.getByTestId('edit-modal-overlay')).not.toBeVisible()
+    })
+
+    test('should update opportunity when form is submitted', async ({ page }) => {
+      const updatedOpportunity = { ...mockOpportunity, title: 'Updated Title' }
+
+      await page.route('**/api/opportunities/1', (route) => {
+        if (route.request().method() === 'GET') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(mockOpportunity),
+          })
+        }
+        if (route.request().method() === 'PUT') {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(updatedOpportunity),
+          })
+        }
+      })
+      await page.route('**/api/skills', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockSkills),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('edit-opportunity-button').click()
+      await page.getByTestId('edit-title-input').clear()
+      await page.getByTestId('edit-title-input').fill('Updated Title')
+      await page.getByTestId('save-edit-button').click()
+
+      await expect(page.getByTestId('edit-modal-overlay')).not.toBeVisible()
+      await expect(page.getByTestId('opportunity-title')).toHaveText('Updated Title')
+    })
+  })
+
+  test.describe('Cancel Opportunity Dialog', () => {
+    test('should open cancel dialog when Cancel button is clicked', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('cancel-opportunity-button').click()
+
+      await expect(page.getByTestId('cancel-dialog-overlay')).toBeVisible()
+      await expect(page.getByText(/"Test Opportunity"/)).toBeVisible()
+    })
+
+    test('should close cancel dialog when Keep Opportunity button is clicked', async ({ page }) => {
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('cancel-opportunity-button').click()
+      await expect(page.getByTestId('cancel-dialog-overlay')).toBeVisible()
+
+      await page.getByTestId('keep-opportunity-button').click()
+      await expect(page.getByTestId('cancel-dialog-overlay')).not.toBeVisible()
+    })
+
+    test('should cancel opportunity when confirmed', async ({ page }) => {
+      const cancelledOpportunity = { ...mockOpportunity, status: 'CANCELLED' }
+
+      await page.route('**/api/opportunities/1', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockOpportunity),
+        }),
+      )
+      await page.route('**/api/opportunities/1/cancel', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(cancelledOpportunity),
+        }),
+      )
+
+      const ownerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' }),
+      )
+      const mockToken = `header.${ownerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockToken)
+      await page.goto('/opportunities/1')
+
+      await page.getByTestId('cancel-opportunity-button').click()
+      await page.getByTestId('confirm-cancel-button').click()
+
+      await expect(page.getByTestId('cancel-dialog-overlay')).not.toBeVisible()
+      await expect(page.getByTestId('opportunity-status')).toHaveText('CANCELLED')
+    })
+  })
+
+  // Integration tests
+  if (isIntegration) {
+    test.describe('Integration Tests', () => {
+      async function loginAsPromoter(page: import('@playwright/test').Page) {
+        await page.goto('/login')
+        await page.getByLabel(/email/i).fill('promoter@ua.pt')
+        await page.getByLabel(/password/i).fill('password')
+        await page
+          .locator('form')
+          .getByRole('button', { name: /sign in/i })
+          .click()
+        await expect(page).toHaveURL('/')
+      }
+
+      async function createOpportunity(page: import('@playwright/test').Page, title: string) {
+        await page.goto('/opportunities/create')
+
+        await page.getByLabel(/title/i).fill(title)
+        await page.getByLabel(/description/i).fill('Integration test description')
+        await page.getByLabel(/points reward/i).fill('50')
+        await page.getByLabel(/max volunteers/i).fill('10')
+
+        const startDate = new Date()
+        startDate.setDate(startDate.getDate() + 1)
+        const endDate = new Date()
+        endDate.setDate(endDate.getDate() + 7)
+
+        await page.getByLabel(/start date/i).fill(startDate.toISOString().slice(0, 16))
+        await page.getByLabel(/end date/i).fill(endDate.toISOString().slice(0, 16))
+        await page.getByRole('button', { name: 'Communication' }).click()
+
+        await page
+          .locator('form')
+          .getByRole('button', { name: /create opportunity/i })
+          .click()
+
+        await expect(page.getByText(/opportunity created successfully/i)).toBeVisible()
+      }
+
+      test.beforeEach(async ({ request }) => {
+        await request.post(`${API_URL}/api/test/reset`)
+      })
+
+      test('should edit opportunity successfully', async ({ page }) => {
+        await loginAsPromoter(page)
+        const uniqueTitle = `Edit Test ${Date.now()}`
+        await createOpportunity(page, uniqueTitle)
+
+        // Click the link to view the created opportunity
+        await page.getByTestId('view-created-opportunity-link').click()
+        await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
+
+        // Edit the opportunity
+        await page.getByTestId('edit-opportunity-button').click()
+        await page.getByTestId('edit-title-input').clear()
+        await page.getByTestId('edit-title-input').fill(`${uniqueTitle} - Updated`)
+        await page.getByTestId('save-edit-button').click()
+
+        await expect(page.getByTestId('edit-modal-overlay')).not.toBeVisible()
+        await expect(page.getByTestId('opportunity-title')).toHaveText(`${uniqueTitle} - Updated`)
+      })
+
+      test('should cancel opportunity successfully', async ({ page }) => {
+        await loginAsPromoter(page)
+        const uniqueTitle = `Cancel Test ${Date.now()}`
+        await createOpportunity(page, uniqueTitle)
+
+        // Click the link to view the created opportunity
+        await page.getByTestId('view-created-opportunity-link').click()
+        await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
+
+        // Cancel the opportunity
+        await page.getByTestId('cancel-opportunity-button').click()
+        await page.getByTestId('confirm-cancel-button').click()
+
+        await expect(page.getByTestId('cancel-dialog-overlay')).not.toBeVisible()
+        await expect(page.getByTestId('opportunity-status')).toHaveText('CANCELLED')
+      })
+    })
+  }
+})

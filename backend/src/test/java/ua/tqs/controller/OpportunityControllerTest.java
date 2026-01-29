@@ -10,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -20,8 +19,11 @@ import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.dto.SkillResponse;
+import ua.tqs.dto.UpdateOpportunityRequest;
 import ua.tqs.dto.UserResponse;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityOwnershipException;
+import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.enums.OpportunityStatus;
@@ -499,6 +501,271 @@ class OpportunityControllerTest {
                     filter.getMinPoints() != null && filter.getMinPoints().equals(minPoints) &&
                     filter.getMaxPoints() != null && filter.getMaxPoints().equals(maxPoints)
             ), any(Pageable.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/opportunities/{id}")
+    class UpdateOpportunityEndpoint {
+
+        private JwtUserDetails promoterUser;
+        private JwtUserDetails adminUser;
+        private UpdateOpportunityRequest updateRequest;
+
+        @BeforeEach
+        void setUpUpdateTests() {
+            promoterUser = new JwtUserDetails(1L, "promoter@ua.pt", "PROMOTER");
+            adminUser = new JwtUserDetails(2L, "admin@ua.pt", "ADMIN");
+            updateRequest = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .description("Updated description")
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful update")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.updateOpportunity(1L, updateRequest, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return updated OpportunityResponse")
+        void shouldReturnUpdatedOpportunityResponse() {
+            // Arrange
+            OpportunityResponse updatedResponse = OpportunityResponse.builder()
+                    .id(1L)
+                    .title("Updated Title")
+                    .description("Updated description")
+                    .status(OpportunityStatus.DRAFT)
+                    .build();
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenReturn(updatedResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.updateOpportunity(1L, updateRequest, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getTitle()).isEqualTo("Updated Title");
+        }
+
+        @Test
+        @DisplayName("should delegate to OpportunityService.updateOpportunity()")
+        void shouldDelegateToOpportunityService() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            opportunityController.updateOpportunity(1L, updateRequest, promoterUser);
+
+            // Assert
+            verify(opportunityService).updateOpportunity(eq(1L), eq(1L), eq(updateRequest), eq(false));
+        }
+
+        @Test
+        @DisplayName("should pass isAdmin=true when user has ADMIN role")
+        void shouldPassIsAdminTrueForAdmin() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(2L), eq(1L), any(UpdateOpportunityRequest.class), eq(true)))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            opportunityController.updateOpportunity(1L, updateRequest, adminUser);
+
+            // Assert
+            verify(opportunityService).updateOpportunity(eq(2L), eq(1L), eq(updateRequest), eq(true));
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityNotFoundException from service")
+        void shouldPropagateNotFoundException() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(999L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenThrow(new OpportunityNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.updateOpportunity(999L, updateRequest, promoterUser))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOwnershipException() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenThrow(new OpportunityOwnershipException());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.updateOpportunity(1L, updateRequest, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Access denied");
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityStatusException from service")
+        void shouldPropagateStatusException() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenThrow(new OpportunityStatusException("Cannot edit opportunity in current status"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.updateOpportunity(1L, updateRequest, promoterUser))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot edit opportunity in current status");
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityValidationException from service")
+        void shouldPropagateValidationException() {
+            // Arrange
+            when(opportunityService.updateOpportunity(eq(1L), eq(1L), any(UpdateOpportunityRequest.class), eq(false)))
+                    .thenThrow(new OpportunityValidationException("End date must be after start date"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.updateOpportunity(1L, updateRequest, promoterUser))
+                    .isInstanceOf(OpportunityValidationException.class)
+                    .hasMessage("End date must be after start date");
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/opportunities/{id}/cancel")
+    class CancelOpportunityEndpoint {
+
+        private JwtUserDetails promoterUser;
+        private JwtUserDetails adminUser;
+
+        @BeforeEach
+        void setUpCancelTests() {
+            promoterUser = new JwtUserDetails(1L, "promoter@ua.pt", "PROMOTER");
+            adminUser = new JwtUserDetails(2L, "admin@ua.pt", "ADMIN");
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful cancel")
+        void shouldReturnOkStatus() {
+            // Arrange
+            OpportunityResponse cancelledResponse = OpportunityResponse.builder()
+                    .id(1L)
+                    .status(OpportunityStatus.CANCELLED)
+                    .build();
+            when(opportunityService.cancelOpportunity(eq(1L), eq(1L), eq(false)))
+                    .thenReturn(cancelledResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.cancelOpportunity(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return cancelled OpportunityResponse")
+        void shouldReturnCancelledOpportunityResponse() {
+            // Arrange
+            OpportunityResponse cancelledResponse = OpportunityResponse.builder()
+                    .id(1L)
+                    .title("Cancelled Event")
+                    .status(OpportunityStatus.CANCELLED)
+                    .build();
+            when(opportunityService.cancelOpportunity(eq(1L), eq(1L), eq(false)))
+                    .thenReturn(cancelledResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.cancelOpportunity(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(OpportunityStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("should delegate to OpportunityService.cancelOpportunity()")
+        void shouldDelegateToOpportunityService() {
+            // Arrange
+            OpportunityResponse cancelledResponse = OpportunityResponse.builder()
+                    .id(1L)
+                    .status(OpportunityStatus.CANCELLED)
+                    .build();
+            when(opportunityService.cancelOpportunity(eq(1L), eq(1L), eq(false)))
+                    .thenReturn(cancelledResponse);
+
+            // Act
+            opportunityController.cancelOpportunity(1L, promoterUser);
+
+            // Assert
+            verify(opportunityService).cancelOpportunity(eq(1L), eq(1L), eq(false));
+        }
+
+        @Test
+        @DisplayName("should pass isAdmin=true when user has ADMIN role")
+        void shouldPassIsAdminTrueForAdmin() {
+            // Arrange
+            OpportunityResponse cancelledResponse = OpportunityResponse.builder()
+                    .id(1L)
+                    .status(OpportunityStatus.CANCELLED)
+                    .build();
+            when(opportunityService.cancelOpportunity(eq(2L), eq(1L), eq(true)))
+                    .thenReturn(cancelledResponse);
+
+            // Act
+            opportunityController.cancelOpportunity(1L, adminUser);
+
+            // Assert
+            verify(opportunityService).cancelOpportunity(eq(2L), eq(1L), eq(true));
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityNotFoundException from service")
+        void shouldPropagateNotFoundException() {
+            // Arrange
+            when(opportunityService.cancelOpportunity(eq(1L), eq(999L), eq(false)))
+                    .thenThrow(new OpportunityNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.cancelOpportunity(999L, promoterUser))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOwnershipException() {
+            // Arrange
+            when(opportunityService.cancelOpportunity(eq(1L), eq(1L), eq(false)))
+                    .thenThrow(new OpportunityOwnershipException());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.cancelOpportunity(1L, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Access denied");
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityStatusException from service")
+        void shouldPropagateStatusException() {
+            // Arrange
+            when(opportunityService.cancelOpportunity(eq(1L), eq(1L), eq(false)))
+                    .thenThrow(new OpportunityStatusException("Cannot cancel opportunity in progress"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.cancelOpportunity(1L, promoterUser))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot cancel opportunity in progress");
         }
     }
 }
