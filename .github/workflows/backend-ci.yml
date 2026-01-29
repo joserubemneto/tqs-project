@@ -15,8 +15,8 @@ jobs:
       run:
         working-directory: backend
 
-    # PostgreSQL service available for Testcontainers if needed
-    # Integration tests use H2 in-memory database by default (test profile)
+    # Docker is available by default on ubuntu-latest for Testcontainers
+    # No additional Docker service needed - Testcontainers manages containers
 
     steps:
       - name: Checkout repository

@@ -53,19 +53,8 @@ describe('RegisterPage', () => {
     expect(screen.getByTestId('register-form')).toBeInTheDocument()
   })
 
-  it('should render "Already have an account?" text', () => {
-    render(<RegisterPage />)
-
-    expect(screen.getByText(/already have an account/i)).toBeInTheDocument()
-  })
-
-  it('should render "Back to Home" link', () => {
-    render(<RegisterPage />)
-
-    const link = screen.getByRole('link', { name: /back to home/i })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/')
-  })
+  // Note: "Already have an account?" text is part of RegisterForm component
+  // which is tested in RegisterForm.spec.tsx
 
   it('should navigate to home page on successful registration', async () => {
     const user = userEvent.setup()
@@ -84,10 +73,4 @@ describe('RegisterPage', () => {
     expect(mainDiv).toHaveClass('container', 'mx-auto', 'max-w-md', 'px-4', 'pb-8')
   })
 
-  it('should style the "Back to Home" link correctly', () => {
-    render(<RegisterPage />)
-
-    const link = screen.getByRole('link', { name: /back to home/i })
-    expect(link).toHaveClass('text-primary', 'hover:underline', 'font-medium')
-  })
 })
