@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
 import {
   applyToOpportunity,
+  approveApplication,
   getApplicationStatusColor,
   getApplicationStatusLabel,
+  getApplicationsForOpportunity,
   getApprovedApplicationCount,
   getMyApplicationForOpportunity,
   getMyApplications,
   parseApplicationError,
+  rejectApplication,
 } from './application'
 
 // Mock the api module
@@ -18,6 +21,7 @@ vi.mock('./api', async () => {
     api: {
       get: vi.fn(),
       post: vi.fn(),
+      patch: vi.fn(),
     },
   }
 })
@@ -399,6 +403,272 @@ describe('application', () => {
       vi.mocked(api.get).mockRejectedValue(error)
 
       await expect(getApprovedApplicationCount(1)).rejects.toThrow(error)
+    })
+  })
+
+  describe('getApplicationsForOpportunity', () => {
+    const mockApplications = [
+      {
+        id: 1,
+        status: 'PENDING',
+        message: 'I would love to help!',
+        appliedAt: '2024-01-15T10:00:00Z',
+        opportunity: {
+          id: 1,
+          title: 'UA Open Day Support',
+          status: 'OPEN',
+          startDate: '2024-02-01T09:00:00Z',
+          endDate: '2024-02-07T17:00:00Z',
+          pointsReward: 50,
+          location: 'University Campus',
+        },
+        volunteer: {
+          id: 1,
+          email: 'volunteer@ua.pt',
+          name: 'Volunteer',
+          role: 'VOLUNTEER',
+          points: 0,
+        },
+      },
+      {
+        id: 2,
+        status: 'APPROVED',
+        message: null,
+        appliedAt: '2024-01-10T14:00:00Z',
+        reviewedAt: '2024-01-11T10:00:00Z',
+        opportunity: {
+          id: 1,
+          title: 'UA Open Day Support',
+          status: 'OPEN',
+          startDate: '2024-02-01T09:00:00Z',
+          endDate: '2024-02-07T17:00:00Z',
+          pointsReward: 50,
+          location: 'University Campus',
+        },
+        volunteer: {
+          id: 2,
+          email: 'volunteer2@ua.pt',
+          name: 'Volunteer 2',
+          role: 'VOLUNTEER',
+          points: 0,
+        },
+      },
+    ]
+
+    it('should call api.get with correct endpoint', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockApplications)
+
+      const result = await getApplicationsForOpportunity(1)
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities/1/applications')
+      expect(result).toEqual(mockApplications)
+    })
+
+    it('should return array of ApplicationResponse', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockApplications)
+
+      const result = await getApplicationsForOpportunity(1)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].status).toBe('PENDING')
+      expect(result[1].status).toBe('APPROVED')
+    })
+
+    it('should return applications with volunteer details', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockApplications)
+
+      const result = await getApplicationsForOpportunity(1)
+
+      expect(result[0].volunteer.name).toBe('Volunteer')
+      expect(result[1].volunteer.name).toBe('Volunteer 2')
+    })
+
+    it('should return empty array when no applications', async () => {
+      vi.mocked(api.get).mockResolvedValue([])
+
+      const result = await getApplicationsForOpportunity(1)
+
+      expect(result).toEqual([])
+    })
+
+    it('should propagate 404 error when opportunity not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Opportunity not found with id: 999')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getApplicationsForOpportunity(999)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not authorized', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getApplicationsForOpportunity(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 401 error when not authenticated', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid token')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getApplicationsForOpportunity(1)).rejects.toThrow(error)
+    })
+  })
+
+  describe('approveApplication', () => {
+    const mockApprovedApplication = {
+      id: 1,
+      status: 'APPROVED',
+      message: 'I would love to help!',
+      appliedAt: '2024-01-15T10:00:00Z',
+      reviewedAt: '2024-01-16T10:00:00Z',
+      opportunity: {
+        id: 1,
+        title: 'UA Open Day Support',
+        status: 'OPEN',
+        startDate: '2024-02-01T09:00:00Z',
+        endDate: '2024-02-07T17:00:00Z',
+        pointsReward: 50,
+        location: 'University Campus',
+      },
+      volunteer: {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Volunteer User',
+        role: 'VOLUNTEER',
+        points: 0,
+      },
+    }
+
+    it('should call api.patch with correct endpoint', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockApprovedApplication)
+
+      const result = await approveApplication(1)
+
+      expect(api.patch).toHaveBeenCalledWith('/applications/1/approve')
+      expect(result).toEqual(mockApprovedApplication)
+    })
+
+    it('should return ApplicationResponse with APPROVED status', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockApprovedApplication)
+
+      const result = await approveApplication(1)
+
+      expect(result.status).toBe('APPROVED')
+      expect(result.reviewedAt).toBe('2024-01-16T10:00:00Z')
+    })
+
+    it('should propagate 404 error when application not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Application not found with id: 999')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(approveApplication(999)).rejects.toThrow(error)
+    })
+
+    it('should propagate 400 error when application is not pending', async () => {
+      const error = new ApiError(
+        400,
+        'Bad Request',
+        'Cannot approve application with status: APPROVED',
+      )
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(approveApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 409 error when no spots available', async () => {
+      const error = new ApiError(409, 'Conflict', 'No spots available')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(approveApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not authorized', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(approveApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 401 error when not authenticated', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid token')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(approveApplication(1)).rejects.toThrow(error)
+    })
+  })
+
+  describe('rejectApplication', () => {
+    const mockRejectedApplication = {
+      id: 1,
+      status: 'REJECTED',
+      message: 'I would love to help!',
+      appliedAt: '2024-01-15T10:00:00Z',
+      reviewedAt: '2024-01-16T10:00:00Z',
+      opportunity: {
+        id: 1,
+        title: 'UA Open Day Support',
+        status: 'OPEN',
+        startDate: '2024-02-01T09:00:00Z',
+        endDate: '2024-02-07T17:00:00Z',
+        pointsReward: 50,
+        location: 'University Campus',
+      },
+      volunteer: {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Volunteer User',
+        role: 'VOLUNTEER',
+        points: 0,
+      },
+    }
+
+    it('should call api.patch with correct endpoint', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockRejectedApplication)
+
+      const result = await rejectApplication(1)
+
+      expect(api.patch).toHaveBeenCalledWith('/applications/1/reject')
+      expect(result).toEqual(mockRejectedApplication)
+    })
+
+    it('should return ApplicationResponse with REJECTED status', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockRejectedApplication)
+
+      const result = await rejectApplication(1)
+
+      expect(result.status).toBe('REJECTED')
+      expect(result.reviewedAt).toBe('2024-01-16T10:00:00Z')
+    })
+
+    it('should propagate 404 error when application not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Application not found with id: 999')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(rejectApplication(999)).rejects.toThrow(error)
+    })
+
+    it('should propagate 400 error when application is not pending', async () => {
+      const error = new ApiError(
+        400,
+        'Bad Request',
+        'Cannot reject application with status: REJECTED',
+      )
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(rejectApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not authorized', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(rejectApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 401 error when not authenticated', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid token')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(rejectApplication(1)).rejects.toThrow(error)
     })
   })
 

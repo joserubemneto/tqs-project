@@ -110,6 +110,29 @@ export async function getApprovedApplicationCount(opportunityId: number): Promis
 }
 
 /**
+ * Get all applications for an opportunity (PROMOTER/ADMIN only)
+ */
+export async function getApplicationsForOpportunity(
+  opportunityId: number,
+): Promise<ApplicationResponse[]> {
+  return api.get<ApplicationResponse[]>(`/opportunities/${opportunityId}/applications`)
+}
+
+/**
+ * Approve an application (PROMOTER/ADMIN only)
+ */
+export async function approveApplication(applicationId: number): Promise<ApplicationResponse> {
+  return api.patch<ApplicationResponse>(`/applications/${applicationId}/approve`)
+}
+
+/**
+ * Reject an application (PROMOTER/ADMIN only)
+ */
+export async function rejectApplication(applicationId: number): Promise<ApplicationResponse> {
+  return api.patch<ApplicationResponse>(`/applications/${applicationId}/reject`)
+}
+
+/**
  * Parse API error response for application operations
  */
 export async function parseApplicationError(error: unknown): Promise<string> {

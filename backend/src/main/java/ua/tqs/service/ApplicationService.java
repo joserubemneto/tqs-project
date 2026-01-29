@@ -7,8 +7,11 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.ApplicationResponse;
 import ua.tqs.dto.CreateApplicationRequest;
 import ua.tqs.exception.AlreadyAppliedException;
+import ua.tqs.exception.ApplicationNotFoundException;
+import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.Application;
@@ -16,10 +19,12 @@ import ua.tqs.model.Opportunity;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.ApplicationStatus;
 import ua.tqs.model.enums.OpportunityStatus;
+import ua.tqs.model.enums.UserRole;
 import ua.tqs.repository.ApplicationRepository;
 import ua.tqs.repository.OpportunityRepository;
 import ua.tqs.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -123,5 +128,119 @@ public class ApplicationService {
                 .orElseThrow(() -> new OpportunityNotFoundException(opportunityId));
 
         return applicationRepository.countByOpportunityAndStatus(opportunity, ApplicationStatus.APPROVED);
+    }
+
+    /**
+     * Get all applications for an opportunity (for promoters/admins).
+     * Validates that the requesting user is the opportunity owner or an admin.
+     */
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> getApplicationsForOpportunity(Long opportunityId, Long userId) {
+        Opportunity opportunity = opportunityRepository.findById(opportunityId)
+                .orElseThrow(() -> new OpportunityNotFoundException(opportunityId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        // Check if user is the promoter or an admin
+        boolean isOwner = opportunity.getPromoter().getId().equals(userId);
+        boolean isAdmin = user.getRole() == UserRole.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new OpportunityOwnershipException("Only the opportunity promoter or admin can view applications");
+        }
+
+        List<Application> applications = applicationRepository.findByOpportunity(opportunity);
+        log.debug("Retrieved {} applications for opportunity {}", applications.size(), opportunityId);
+
+        return applications.stream()
+                .map(ApplicationResponse::fromApplication)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Approve an application.
+     * Validates that the requesting user is the opportunity owner or an admin,
+     * and that there are available spots.
+     */
+    @Transactional
+    public ApplicationResponse approveApplication(Long applicationId, Long userId) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        Opportunity opportunity = application.getOpportunity();
+
+        // Check if user is the promoter or an admin
+        boolean isOwner = opportunity.getPromoter().getId().equals(userId);
+        boolean isAdmin = user.getRole() == UserRole.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new OpportunityOwnershipException("Only the opportunity promoter or admin can approve applications");
+        }
+
+        // Check if application is in PENDING status
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new InvalidApplicationStatusException(
+                    "Cannot approve application with status: " + application.getStatus());
+        }
+
+        // Check if there are available spots
+        long approvedCount = applicationRepository.countByOpportunityAndStatus(
+                opportunity, ApplicationStatus.APPROVED);
+        if (approvedCount >= opportunity.getMaxVolunteers()) {
+            throw new NoSpotsAvailableException();
+        }
+
+        // Approve the application
+        application.setStatus(ApplicationStatus.APPROVED);
+        application.setReviewedAt(LocalDateTime.now());
+
+        Application savedApplication = applicationRepository.save(application);
+        log.info("Application {} approved by user {} for opportunity '{}'",
+                applicationId, userId, opportunity.getTitle());
+
+        return ApplicationResponse.fromApplication(savedApplication);
+    }
+
+    /**
+     * Reject an application.
+     * Validates that the requesting user is the opportunity owner or an admin.
+     */
+    @Transactional
+    public ApplicationResponse rejectApplication(Long applicationId, Long userId) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        Opportunity opportunity = application.getOpportunity();
+
+        // Check if user is the promoter or an admin
+        boolean isOwner = opportunity.getPromoter().getId().equals(userId);
+        boolean isAdmin = user.getRole() == UserRole.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new OpportunityOwnershipException("Only the opportunity promoter or admin can reject applications");
+        }
+
+        // Check if application is in PENDING status
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new InvalidApplicationStatusException(
+                    "Cannot reject application with status: " + application.getStatus());
+        }
+
+        // Reject the application
+        application.setStatus(ApplicationStatus.REJECTED);
+        application.setReviewedAt(LocalDateTime.now());
+
+        Application savedApplication = applicationRepository.save(application);
+        log.info("Application {} rejected by user {} for opportunity '{}'",
+                applicationId, userId, opportunity.getTitle());
+
+        return ApplicationResponse.fromApplication(savedApplication);
     }
 }

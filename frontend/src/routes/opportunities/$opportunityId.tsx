@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
+import { ApplicationsManagement } from '@/components/opportunity/ApplicationsManagement'
 import { ApplyButton } from '@/components/opportunity/ApplyButton'
 import { CancelOpportunityDialog } from '@/components/opportunity/CancelOpportunityDialog'
 import { EditOpportunityModal } from '@/components/opportunity/EditOpportunityModal'
@@ -427,6 +428,14 @@ function OpportunityDetailPage() {
                 />
               </CardContent>
             </Card>
+          )}
+
+          {/* Applications Management - Only show if user is the promoter/admin */}
+          {canManage && (
+            <ApplicationsManagement
+              opportunityId={opportunity.id}
+              maxVolunteers={opportunity.maxVolunteers}
+            />
           )}
         </div>
       </div>

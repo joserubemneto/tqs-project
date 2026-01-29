@@ -14,8 +14,11 @@ import ua.tqs.config.JwtUserDetails;
 import ua.tqs.dto.ApplicationResponse;
 import ua.tqs.dto.CreateApplicationRequest;
 import ua.tqs.exception.AlreadyAppliedException;
+import ua.tqs.exception.ApplicationNotFoundException;
+import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.enums.ApplicationStatus;
@@ -420,6 +423,330 @@ class ApplicationControllerTest {
             assertThatThrownBy(() -> applicationController.getApprovedApplicationCount(999L))
                     .isInstanceOf(OpportunityNotFoundException.class)
                     .hasMessageContaining("999");
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/opportunities/{opportunityId}/applications")
+    class GetApplicationsForOpportunityEndpoint {
+
+        private JwtUserDetails promoterUser;
+
+        @BeforeEach
+        void setUp() {
+            promoterUser = new JwtUserDetails(2L, "promoter@ua.pt", "PROMOTER");
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(applicationService.getApplicationsForOpportunity(1L, 2L))
+                    .thenReturn(List.of(applicationResponse));
+
+            // Act
+            ResponseEntity<List<ApplicationResponse>> response = 
+                    applicationController.getApplicationsForOpportunity(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return list of applications")
+        void shouldReturnListOfApplications() {
+            // Arrange
+            when(applicationService.getApplicationsForOpportunity(1L, 2L))
+                    .thenReturn(List.of(applicationResponse));
+
+            // Act
+            ResponseEntity<List<ApplicationResponse>> response = 
+                    applicationController.getApplicationsForOpportunity(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should return empty list when no applications")
+        void shouldReturnEmptyList() {
+            // Arrange
+            when(applicationService.getApplicationsForOpportunity(1L, 2L))
+                    .thenReturn(List.of());
+
+            // Act
+            ResponseEntity<List<ApplicationResponse>> response = 
+                    applicationController.getApplicationsForOpportunity(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should delegate to ApplicationService.getApplicationsForOpportunity()")
+        void shouldDelegateToApplicationService() {
+            // Arrange
+            when(applicationService.getApplicationsForOpportunity(1L, 2L))
+                    .thenReturn(List.of(applicationResponse));
+
+            // Act
+            applicationController.getApplicationsForOpportunity(1L, promoterUser);
+
+            // Assert
+            verify(applicationService).getApplicationsForOpportunity(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOpportunityOwnershipException() {
+            // Arrange
+            when(applicationService.getApplicationsForOpportunity(1L, 2L))
+                    .thenThrow(new OpportunityOwnershipException("Only the opportunity promoter or admin can view applications"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.getApplicationsForOpportunity(1L, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/applications/{applicationId}/approve")
+    class ApproveApplicationEndpoint {
+
+        private JwtUserDetails promoterUser;
+        private ApplicationResponse approvedApplicationResponse;
+
+        @BeforeEach
+        void setUp() {
+            promoterUser = new JwtUserDetails(2L, "promoter@ua.pt", "PROMOTER");
+            
+            ApplicationResponse.OpportunitySummary opportunitySummary = ApplicationResponse.OpportunitySummary.builder()
+                    .id(1L)
+                    .title("UA Open Day Support")
+                    .status("OPEN")
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .pointsReward(50)
+                    .location("University Campus")
+                    .build();
+
+            approvedApplicationResponse = ApplicationResponse.builder()
+                    .id(1L)
+                    .status(ApplicationStatus.APPROVED)
+                    .message("I would love to help!")
+                    .appliedAt(LocalDateTime.now())
+                    .reviewedAt(LocalDateTime.now())
+                    .opportunity(opportunitySummary)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful approval")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenReturn(approvedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.approveApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return approved ApplicationResponse")
+        void shouldReturnApprovedApplicationResponse() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenReturn(approvedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.approveApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(ApplicationStatus.APPROVED);
+            assertThat(response.getBody().getReviewedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should delegate to ApplicationService.approveApplication()")
+        void shouldDelegateToApplicationService() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenReturn(approvedApplicationResponse);
+
+            // Act
+            applicationController.approveApplication(1L, promoterUser);
+
+            // Assert
+            verify(applicationService).approveApplication(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("should propagate ApplicationNotFoundException from service")
+        void shouldPropagateApplicationNotFoundException() {
+            // Arrange
+            when(applicationService.approveApplication(999L, 2L))
+                    .thenThrow(new ApplicationNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.approveApplication(999L, promoterUser))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate InvalidApplicationStatusException from service")
+        void shouldPropagateInvalidApplicationStatusException() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenThrow(new InvalidApplicationStatusException("Cannot approve application with status: APPROVED"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.approveApplication(1L, promoterUser))
+                    .isInstanceOf(InvalidApplicationStatusException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate NoSpotsAvailableException from service")
+        void shouldPropagateNoSpotsAvailableException() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenThrow(new NoSpotsAvailableException());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.approveApplication(1L, promoterUser))
+                    .isInstanceOf(NoSpotsAvailableException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOpportunityOwnershipException() {
+            // Arrange
+            when(applicationService.approveApplication(1L, 2L))
+                    .thenThrow(new OpportunityOwnershipException("Only the opportunity promoter or admin can approve applications"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.approveApplication(1L, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/applications/{applicationId}/reject")
+    class RejectApplicationEndpoint {
+
+        private JwtUserDetails promoterUser;
+        private ApplicationResponse rejectedApplicationResponse;
+
+        @BeforeEach
+        void setUp() {
+            promoterUser = new JwtUserDetails(2L, "promoter@ua.pt", "PROMOTER");
+            
+            ApplicationResponse.OpportunitySummary opportunitySummary = ApplicationResponse.OpportunitySummary.builder()
+                    .id(1L)
+                    .title("UA Open Day Support")
+                    .status("OPEN")
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .pointsReward(50)
+                    .location("University Campus")
+                    .build();
+
+            rejectedApplicationResponse = ApplicationResponse.builder()
+                    .id(1L)
+                    .status(ApplicationStatus.REJECTED)
+                    .message("I would love to help!")
+                    .appliedAt(LocalDateTime.now())
+                    .reviewedAt(LocalDateTime.now())
+                    .opportunity(opportunitySummary)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful rejection")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(applicationService.rejectApplication(1L, 2L))
+                    .thenReturn(rejectedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.rejectApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return rejected ApplicationResponse")
+        void shouldReturnRejectedApplicationResponse() {
+            // Arrange
+            when(applicationService.rejectApplication(1L, 2L))
+                    .thenReturn(rejectedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.rejectApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(ApplicationStatus.REJECTED);
+            assertThat(response.getBody().getReviewedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should delegate to ApplicationService.rejectApplication()")
+        void shouldDelegateToApplicationService() {
+            // Arrange
+            when(applicationService.rejectApplication(1L, 2L))
+                    .thenReturn(rejectedApplicationResponse);
+
+            // Act
+            applicationController.rejectApplication(1L, promoterUser);
+
+            // Assert
+            verify(applicationService).rejectApplication(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("should propagate ApplicationNotFoundException from service")
+        void shouldPropagateApplicationNotFoundException() {
+            // Arrange
+            when(applicationService.rejectApplication(999L, 2L))
+                    .thenThrow(new ApplicationNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.rejectApplication(999L, promoterUser))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate InvalidApplicationStatusException from service")
+        void shouldPropagateInvalidApplicationStatusException() {
+            // Arrange
+            when(applicationService.rejectApplication(1L, 2L))
+                    .thenThrow(new InvalidApplicationStatusException("Cannot reject application with status: REJECTED"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.rejectApplication(1L, promoterUser))
+                    .isInstanceOf(InvalidApplicationStatusException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOpportunityOwnershipException() {
+            // Arrange
+            when(applicationService.rejectApplication(1L, 2L))
+                    .thenThrow(new OpportunityOwnershipException("Only the opportunity promoter or admin can reject applications"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.rejectApplication(1L, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class);
         }
     }
 }

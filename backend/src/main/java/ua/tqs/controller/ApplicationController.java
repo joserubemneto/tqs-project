@@ -96,4 +96,64 @@ public class ApplicationController {
         long count = applicationService.getApprovedApplicationCount(opportunityId);
         return ResponseEntity.ok(count);
     }
+
+    @GetMapping("/opportunities/{opportunityId}/applications")
+    @PreAuthorize("hasAnyRole('PROMOTER', 'PARTNER', 'ADMIN')")
+    @Operation(summary = "Get applications for an opportunity", description = "Get all applications for an opportunity (PROMOTER/ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved applications"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User is not the opportunity owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Opportunity not found")
+    })
+    public ResponseEntity<List<ApplicationResponse>> getApplicationsForOpportunity(
+            @Parameter(description = "Opportunity ID")
+            @PathVariable Long opportunityId,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        List<ApplicationResponse> applications = applicationService.getApplicationsForOpportunity(
+                opportunityId, currentUser.getUserId());
+        return ResponseEntity.ok(applications);
+    }
+
+    @PatchMapping("/applications/{applicationId}/approve")
+    @PreAuthorize("hasAnyRole('PROMOTER', 'PARTNER', 'ADMIN')")
+    @Operation(summary = "Approve an application", description = "Approve a volunteer's application (PROMOTER/ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully approved application"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Invalid application status"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User is not the opportunity owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Application not found"),
+            @ApiResponse(responseCode = "409", description = "Conflict - No spots available")
+    })
+    public ResponseEntity<ApplicationResponse> approveApplication(
+            @Parameter(description = "Application ID")
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        ApplicationResponse response = applicationService.approveApplication(
+                applicationId, currentUser.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/applications/{applicationId}/reject")
+    @PreAuthorize("hasAnyRole('PROMOTER', 'PARTNER', 'ADMIN')")
+    @Operation(summary = "Reject an application", description = "Reject a volunteer's application (PROMOTER/ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully rejected application"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Invalid application status"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User is not the opportunity owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Application not found")
+    })
+    public ResponseEntity<ApplicationResponse> rejectApplication(
+            @Parameter(description = "Application ID")
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        ApplicationResponse response = applicationService.rejectApplication(
+                applicationId, currentUser.getUserId());
+        return ResponseEntity.ok(response);
+    }
 }

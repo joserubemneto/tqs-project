@@ -204,6 +204,174 @@ test.describe('Volunteer Applications', () => {
       // Should navigate to opportunity detail page
       await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
     })
+
+    test('should show Applications Management section for promoter', async ({ page, request }) => {
+      const uniqueTitle = generateUniqueTitle()
+
+      // Create an OPEN opportunity via test API
+      const opportunityId = await createOpenOpportunity(request, uniqueTitle)
+
+      // Login as promoter
+      await loginAsPromoter(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // Should see Applications card
+      await expect(page.getByRole('heading', { name: /applications/i })).toBeVisible()
+      await expect(page.getByText(/no applications yet/i)).toBeVisible()
+    })
+
+    test('should approve a pending application', async ({ page, request }) => {
+      const uniqueTitle = generateUniqueTitle()
+
+      // Step 1: Create an OPEN opportunity via test API
+      const opportunityId = await createOpenOpportunity(request, uniqueTitle)
+
+      // Step 2: Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+      await expect(page.getByTestId('status-badge')).toHaveText('Pending')
+
+      // Step 3: Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+
+      // Step 4: Navigate to the opportunity
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // Step 5: Verify application appears in the list
+      await expect(page.getByRole('heading', { name: /applications/i })).toBeVisible()
+      await expect(page.getByText(/1 pending/i)).toBeVisible()
+      await expect(page.getByTestId('volunteer-name')).toHaveText('Sample Volunteer')
+      await expect(page.getByTestId('application-status')).toHaveText('Pending')
+
+      // Step 6: Approve the application
+      await page.getByTestId('approve-button').click()
+
+      // Step 7: Verify application status changed to Approved
+      await expect(page.getByTestId('application-status')).toHaveText('Approved')
+      await expect(page.getByText(/1 \/ 5 spots filled/i)).toBeVisible()
+
+      // Step 8: Verify volunteer sees approved status
+      await logout(page)
+      await loginAsVolunteer(page)
+      await page.goto('/my-applications')
+      await expect(page.getByTestId('status-badge')).toHaveText('Approved')
+    })
+
+    test('should reject a pending application', async ({ page, request }) => {
+      const uniqueTitle = generateUniqueTitle()
+
+      // Step 1: Create an OPEN opportunity via test API
+      const opportunityId = await createOpenOpportunity(request, uniqueTitle)
+
+      // Step 2: Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Step 3: Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+
+      // Step 4: Navigate to the opportunity
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // Step 5: Verify application appears
+      await expect(page.getByTestId('volunteer-name')).toHaveText('Sample Volunteer')
+
+      // Step 6: Reject the application
+      await page.getByTestId('reject-button').click()
+
+      // Step 7: Verify application status changed to Rejected
+      await expect(page.getByTestId('application-status')).toHaveText('Rejected')
+
+      // Step 8: Verify volunteer sees rejected status
+      await logout(page)
+      await loginAsVolunteer(page)
+      await page.goto('/my-applications')
+      await expect(page.getByTestId('status-badge')).toHaveText('Rejected')
+    })
+
+    test('should not allow approve when no spots available', async ({ page, request }) => {
+      // Create opportunity with max 1 volunteer
+      const uniqueTitle = generateUniqueTitle()
+
+      // Set dates (start tomorrow, end in 7 days)
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() + 1)
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() + 7)
+
+      // Get the skill ID for Communication
+      const skillsResponse = await request.get(`${API_URL}/api/skills`)
+      const skills = await skillsResponse.json()
+      const communicationSkill = skills.find((s: { name: string }) => s.name === 'Communication')
+
+      // Create opportunity with maxVolunteers = 1
+      const response = await request.post(`${API_URL}/api/test/opportunity`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        data: {
+          title: uniqueTitle,
+          description: 'E2E test opportunity for applications',
+          pointsReward: 100,
+          maxVolunteers: 1, // Only 1 spot
+          startDate: startDate.toISOString().slice(0, 19),
+          endDate: endDate.toISOString().slice(0, 19),
+          location: 'Test Location',
+          requiredSkillIds: [communicationSkill.id],
+        },
+      })
+      expect(response.ok()).toBeTruthy()
+      const opportunity = await response.json()
+      const opportunityId = opportunity.id
+
+      // Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // Approve the first application
+      await page.getByTestId('approve-button').click()
+      await expect(page.getByTestId('application-status')).toHaveText('Approved')
+
+      // Logout and create a second volunteer application
+      await logout(page)
+
+      // Register a new volunteer
+      await page.goto('/register')
+      await page.getByLabel(/name/i).fill('Second Volunteer')
+      await page.getByLabel(/email/i).fill(`volunteer2-${Date.now()}@ua.pt`)
+      await page.locator('input[name="password"]').fill('password123')
+      await page.locator('input[name="confirmPassword"]').fill('password123')
+      await page.getByRole('button', { name: /create account/i }).click()
+      await expect(page).toHaveURL('/')
+
+      // Apply to the same opportunity
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Login as promoter again
+      await logout(page)
+      await loginAsPromoter(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // The second application should have approve button disabled
+      const secondApproveButton = page.getByTestId('approve-button')
+      await expect(secondApproveButton).toBeDisabled()
+      await expect(page.getByText(/cannot approve: no spots remaining/i)).toBeVisible()
+    })
   })
 
   // Mock-based tests for non-integration scenarios

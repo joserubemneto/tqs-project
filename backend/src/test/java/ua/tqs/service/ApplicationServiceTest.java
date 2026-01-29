@@ -11,8 +11,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ua.tqs.dto.ApplicationResponse;
 import ua.tqs.dto.CreateApplicationRequest;
 import ua.tqs.exception.AlreadyAppliedException;
+import ua.tqs.exception.ApplicationNotFoundException;
+import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.Application;
@@ -509,6 +512,314 @@ class ApplicationServiceTest {
             assertThatThrownBy(() -> applicationService.getApprovedApplicationCount(999L))
                     .isInstanceOf(OpportunityNotFoundException.class)
                     .hasMessageContaining("999");
+        }
+    }
+
+    @Nested
+    @DisplayName("getApplicationsForOpportunity()")
+    class GetApplicationsForOpportunityMethod {
+
+        @Test
+        @DisplayName("should return all applications for opportunity when user is promoter")
+        void shouldReturnAllApplicationsWhenUserIsPromoter() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.findByOpportunity(opportunity)).thenReturn(List.of(application));
+
+            // Act
+            List<ApplicationResponse> applications = applicationService.getApplicationsForOpportunity(1L, 2L);
+
+            // Assert
+            assertThat(applications).hasSize(1);
+            assertThat(applications.get(0).getVolunteer().getName()).isEqualTo("Sample Volunteer");
+        }
+
+        @Test
+        @DisplayName("should return all applications when user is admin")
+        void shouldReturnAllApplicationsWhenUserIsAdmin() {
+            // Arrange
+            User admin = User.builder()
+                    .id(3L)
+                    .email("admin@ua.pt")
+                    .password("encoded")
+                    .name("Admin User")
+                    .role(UserRole.ADMIN)
+                    .points(0)
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+            when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+            when(applicationRepository.findByOpportunity(opportunity)).thenReturn(List.of(application));
+
+            // Act
+            List<ApplicationResponse> applications = applicationService.getApplicationsForOpportunity(1L, 3L);
+
+            // Assert
+            assertThat(applications).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner or admin")
+        void shouldThrowExceptionWhenUserIsNotOwnerOrAdmin() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(volunteer));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.getApplicationsForOpportunity(1L, 1L))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Only the opportunity promoter or admin can view applications");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity not found")
+        void shouldThrowExceptionWhenOpportunityNotFound() {
+            // Arrange
+            when(opportunityRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.getApplicationsForOpportunity(999L, 2L))
+                    .isInstanceOf(OpportunityNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw exception when user not found")
+        void shouldThrowExceptionWhenUserNotFound() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.getApplicationsForOpportunity(1L, 999L))
+                    .isInstanceOf(UserNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("approveApplication()")
+    class ApproveApplicationMethod {
+
+        @Test
+        @DisplayName("should approve pending application when user is promoter")
+        void shouldApprovePendingApplicationWhenUserIsPromoter() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.countByOpportunityAndStatus(opportunity, ApplicationStatus.APPROVED)).thenReturn(0L);
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.approveApplication(1L, 2L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.APPROVED);
+            assertThat(response.getReviewedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should approve application when user is admin")
+        void shouldApproveApplicationWhenUserIsAdmin() {
+            // Arrange
+            User admin = User.builder()
+                    .id(3L)
+                    .email("admin@ua.pt")
+                    .password("encoded")
+                    .name("Admin User")
+                    .role(UserRole.ADMIN)
+                    .points(0)
+                    .build();
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+            when(applicationRepository.countByOpportunityAndStatus(opportunity, ApplicationStatus.APPROVED)).thenReturn(0L);
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.approveApplication(1L, 3L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner or admin")
+        void shouldThrowExceptionWhenUserIsNotOwnerOrAdmin() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(volunteer));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.approveApplication(1L, 1L))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Only the opportunity promoter or admin can approve applications");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when application not found")
+        void shouldThrowExceptionWhenApplicationNotFound() {
+            // Arrange
+            when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.approveApplication(999L, 2L))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw exception when application is not pending")
+        void shouldThrowExceptionWhenApplicationIsNotPending() {
+            // Arrange
+            application.setStatus(ApplicationStatus.APPROVED);
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.approveApplication(1L, 2L))
+                    .isInstanceOf(InvalidApplicationStatusException.class)
+                    .hasMessage("Cannot approve application with status: APPROVED");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when no spots available")
+        void shouldThrowExceptionWhenNoSpotsAvailable() {
+            // Arrange
+            opportunity.setMaxVolunteers(5);
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.countByOpportunityAndStatus(opportunity, ApplicationStatus.APPROVED)).thenReturn(5L);
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.approveApplication(1L, 2L))
+                    .isInstanceOf(NoSpotsAvailableException.class);
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should set reviewedAt timestamp when approving")
+        void shouldSetReviewedAtTimestampWhenApproving() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.countByOpportunityAndStatus(opportunity, ApplicationStatus.APPROVED)).thenReturn(0L);
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.approveApplication(1L, 2L);
+
+            // Assert
+            verify(applicationRepository).save(argThat(app ->
+                    app.getReviewedAt() != null
+            ));
+        }
+    }
+
+    @Nested
+    @DisplayName("rejectApplication()")
+    class RejectApplicationMethod {
+
+        @Test
+        @DisplayName("should reject pending application when user is promoter")
+        void shouldRejectPendingApplicationWhenUserIsPromoter() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.rejectApplication(1L, 2L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.REJECTED);
+            assertThat(response.getReviewedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should reject application when user is admin")
+        void shouldRejectApplicationWhenUserIsAdmin() {
+            // Arrange
+            User admin = User.builder()
+                    .id(3L)
+                    .email("admin@ua.pt")
+                    .password("encoded")
+                    .name("Admin User")
+                    .role(UserRole.ADMIN)
+                    .points(0)
+                    .build();
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.rejectApplication(1L, 3L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.REJECTED);
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner or admin")
+        void shouldThrowExceptionWhenUserIsNotOwnerOrAdmin() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(volunteer));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.rejectApplication(1L, 1L))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Only the opportunity promoter or admin can reject applications");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when application not found")
+        void shouldThrowExceptionWhenApplicationNotFound() {
+            // Arrange
+            when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.rejectApplication(999L, 2L))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw exception when application is not pending")
+        void shouldThrowExceptionWhenApplicationIsNotPending() {
+            // Arrange
+            application.setStatus(ApplicationStatus.REJECTED);
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.rejectApplication(1L, 2L))
+                    .isInstanceOf(InvalidApplicationStatusException.class)
+                    .hasMessage("Cannot reject application with status: REJECTED");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should set reviewedAt timestamp when rejecting")
+        void shouldSetReviewedAtTimestampWhenRejecting() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.rejectApplication(1L, 2L);
+
+            // Assert
+            verify(applicationRepository).save(argThat(app ->
+                    app.getReviewedAt() != null
+            ));
         }
     }
 }
