@@ -73,6 +73,47 @@ export function isAuthenticated(): boolean {
 }
 
 /**
+ * Decode JWT token to extract user information
+ */
+function decodeToken(
+  token: string,
+): { id: number; email: string; name: string; role: UserRole } | null {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return null
+
+    const decoded = JSON.parse(atob(payload))
+    if (!decoded.email || !decoded.role) return null
+
+    return {
+      id: decoded.id || decoded.sub || 0,
+      email: decoded.email,
+      name: decoded.name || decoded.email.split('@')[0],
+      role: decoded.role,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Get user role from stored token
+ */
+export function getUserRoleFromToken(): UserRole | null {
+  const token = getAuthToken()
+  if (!token) return null
+  const decoded = decodeToken(token)
+  return decoded?.role ?? null
+}
+
+/**
+ * Check if current user is an admin
+ */
+export function isAdmin(): boolean {
+  return getUserRoleFromToken() === 'ADMIN'
+}
+
+/**
  * Parse API error response
  */
 export async function parseAuthError(error: unknown): Promise<string> {
@@ -85,4 +126,63 @@ export async function parseAuthError(error: unknown): Promise<string> {
     }
   }
   return 'An unexpected error occurred'
+}
+
+// ==================== Admin API Types ====================
+
+export interface UserResponse {
+  id: number
+  email: string
+  name: string
+  role: UserRole
+  points: number
+  createdAt: string
+}
+
+export interface UserPageResponse {
+  users: UserResponse[]
+  currentPage: number
+  totalPages: number
+  totalElements: number
+  pageSize: number
+  hasNext: boolean
+  hasPrevious: boolean
+}
+
+export interface GetUsersParams {
+  page?: number
+  size?: number
+  search?: string
+  role?: UserRole
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+}
+
+export interface UpdateRoleRequest {
+  role: UserRole
+}
+
+// ==================== Admin API Functions ====================
+
+/**
+ * Get paginated list of users (admin only)
+ */
+export async function getUsers(params: GetUsersParams = {}): Promise<UserPageResponse> {
+  return api.get<UserPageResponse>('/admin/users', {
+    params: {
+      page: params.page ?? 0,
+      size: params.size ?? 10,
+      search: params.search,
+      role: params.role,
+      sortBy: params.sortBy ?? 'createdAt',
+      sortDir: params.sortDir ?? 'desc',
+    },
+  })
+}
+
+/**
+ * Update a user's role (admin only)
+ */
+export async function updateUserRole(userId: number, role: UserRole): Promise<UserResponse> {
+  return api.put<UserResponse>(`/admin/users/${userId}/role`, { role })
 }

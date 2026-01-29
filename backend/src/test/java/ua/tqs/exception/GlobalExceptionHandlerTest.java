@@ -155,6 +155,70 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleUserNotFound()")
+    class HandleUserNotFound {
+
+        @Test
+        @DisplayName("should return NOT_FOUND status with error message")
+        void shouldReturnNotFoundStatus() {
+            UserNotFoundException exception = new UserNotFoundException(123L);
+
+            ResponseEntity<ErrorResponse> response = handler.handleUserNotFound(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(404);
+            assertThat(response.getBody().getError()).isEqualTo("Not Found");
+            assertThat(response.getBody().getMessage()).isEqualTo("User not found with id: 123");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "User with email test@ua.pt not found";
+            UserNotFoundException exception = new UserNotFoundException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleUserNotFound(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleSelfRoleChange()")
+    class HandleSelfRoleChange {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            SelfRoleChangeException exception = new SelfRoleChangeException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleSelfRoleChange(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("Cannot change your own role");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "You cannot change your own role to prevent lockout";
+            SelfRoleChangeException exception = new SelfRoleChangeException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleSelfRoleChange(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 
