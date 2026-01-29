@@ -881,9 +881,9 @@ test.describe('Edit/Cancel Opportunity', () => {
         const uniqueTitle = `Edit Test ${Date.now()}`
         await createOpportunity(page, uniqueTitle)
 
-        // Navigate to my opportunities and find the created one
-        await page.goto('/opportunities/my')
-        await page.getByText(uniqueTitle).click()
+        // Click the link to view the created opportunity
+        await page.getByTestId('view-created-opportunity-link').click()
+        await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
 
         // Edit the opportunity
         await page.getByTestId('edit-opportunity-button').click()
@@ -900,9 +900,9 @@ test.describe('Edit/Cancel Opportunity', () => {
         const uniqueTitle = `Cancel Test ${Date.now()}`
         await createOpportunity(page, uniqueTitle)
 
-        // Navigate to my opportunities and find the created one
-        await page.goto('/opportunities/my')
-        await page.getByText(uniqueTitle).click()
+        // Click the link to view the created opportunity
+        await page.getByTestId('view-created-opportunity-link').click()
+        await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
 
         // Cancel the opportunity
         await page.getByTestId('cancel-opportunity-button').click()

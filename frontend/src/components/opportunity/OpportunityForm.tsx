@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import {
   Button,
+  buttonVariants,
   Card,
   CardContent,
   CardDescription,
@@ -42,6 +43,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingSkills, setIsLoadingSkills] = useState(true)
   const [successMessage, setSuccessMessage] = useState('')
+  const [createdOpportunityId, setCreatedOpportunityId] = useState<number | null>(null)
 
   // Load skills on mount
   useEffect(() => {
@@ -99,6 +101,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
       })
 
       setSuccessMessage('Opportunity created successfully!')
+      setCreatedOpportunityId(response.id)
       onSuccess?.(response)
 
       // Reset form
@@ -150,9 +153,16 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
             </div>
           )}
 
-          {successMessage && (
-            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500 text-green-700 dark:text-green-400 text-sm">
-              {successMessage}
+          {successMessage && createdOpportunityId && (
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500 text-green-700 dark:text-green-400 text-sm flex items-center justify-between">
+              <span>{successMessage}</span>
+              <a
+                href={`/opportunities/${createdOpportunityId}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                data-testid="view-created-opportunity-link"
+              >
+                View Opportunity
+              </a>
             </div>
           )}
 
