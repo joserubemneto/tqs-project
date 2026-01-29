@@ -252,6 +252,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleOpportunityNotFound()")
+    class HandleOpportunityNotFound {
+
+        @Test
+        @DisplayName("should return NOT_FOUND status with error message")
+        void shouldReturnNotFoundStatus() {
+            OpportunityNotFoundException exception = new OpportunityNotFoundException(123L);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityNotFound(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(404);
+            assertThat(response.getBody().getError()).isEqualTo("Not Found");
+            assertThat(response.getBody().getMessage()).isEqualTo("Opportunity not found with id: 123");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Opportunity with given ID does not exist";
+            OpportunityNotFoundException exception = new OpportunityNotFoundException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityNotFound(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleAccessDenied()")
     class HandleAccessDenied {
 

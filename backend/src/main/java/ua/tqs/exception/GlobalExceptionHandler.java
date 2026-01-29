@@ -76,6 +76,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(OpportunityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOpportunityNotFound(OpportunityNotFoundException ex) {
+        log.warn("Opportunity not found: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
     @ExceptionHandler(SelfRoleChangeException.class)
     public ResponseEntity<ErrorResponse> handleSelfRoleChange(SelfRoleChangeException ex) {
         log.warn("Self role change attempt: {}", ex.getMessage());

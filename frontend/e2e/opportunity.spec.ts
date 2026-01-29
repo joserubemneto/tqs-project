@@ -363,3 +363,103 @@ test.describe('View Opportunities List', () => {
     })
   }
 })
+
+// E2E tests for View Opportunity Details - focus on user flows, not UI details (covered by unit tests)
+test.describe('View Opportunity Details', () => {
+  const mockOpportunity = {
+    id: 1,
+    title: 'UA Open Day Support',
+    description: 'Help with university open day activities.',
+    pointsReward: 50,
+    startDate: '2024-02-01T09:00:00Z',
+    endDate: '2024-02-07T17:00:00Z',
+    maxVolunteers: 10,
+    status: 'OPEN',
+    location: 'University Campus',
+    promoter: {
+      id: 1,
+      email: 'promoter@ua.pt',
+      name: 'Promoter',
+      role: 'PROMOTER',
+      points: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+    },
+    requiredSkills: [{ id: 1, name: 'Communication', category: 'COMMUNICATION', description: '' }],
+    createdAt: '2024-01-15T00:00:00Z',
+  }
+
+  const mockPageResponse = {
+    content: [mockOpportunity],
+    totalElements: 1,
+    totalPages: 1,
+    size: 10,
+    number: 0,
+  }
+
+  test('should navigate from list to detail page', async ({ page }) => {
+    await page.route('**/api/opportunities?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockPageResponse),
+      }),
+    )
+    await page.route('**/api/opportunities/1', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockOpportunity),
+      }),
+    )
+    await page.route('**/api/skills', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
+    )
+
+    await page.goto('/opportunities')
+    await page.getByTestId('opportunity-card-link-1').click()
+    await expect(page).toHaveURL('/opportunities/1')
+    await expect(page.getByTestId('opportunity-title')).toBeVisible()
+  })
+
+  test('should be accessible without authentication', async ({ page }) => {
+    await page.route('**/api/opportunities/1', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockOpportunity),
+      }),
+    )
+
+    await page.goto('/')
+    await page.evaluate(() => localStorage.removeItem('auth_token'))
+    await page.goto('/opportunities/1')
+
+    await expect(page).toHaveURL('/opportunities/1')
+  })
+
+  test('should handle 404 for non-existent opportunity', async ({ page }) => {
+    await page.route('**/api/opportunities/999', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 404, message: 'Not found' }),
+      }),
+    )
+
+    await page.goto('/opportunities/999')
+    await expect(page.getByTestId('error-state')).toBeVisible()
+  })
+
+  if (isIntegration) {
+    test.describe('Integration', () => {
+      test.beforeEach(async () => {
+        await fetch(`${API_URL}/api/test/reset`, { method: 'POST' })
+      })
+
+      test('should return 404 for non-existent opportunity from real backend', async ({ page }) => {
+        await page.goto('/opportunities/99999')
+        await expect(page.getByTestId('error-state')).toBeVisible()
+      })
+    })
+  }
+})

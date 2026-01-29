@@ -21,6 +21,7 @@ import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.dto.SkillResponse;
 import ua.tqs.dto.UserResponse;
+import ua.tqs.exception.OpportunityNotFoundException;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.enums.OpportunityStatus;
@@ -276,6 +277,77 @@ class OpportunityControllerTest {
             // Act & Assert
             assertThatThrownBy(() -> opportunityController.getMyOpportunities(currentUser))
                     .isInstanceOf(UserNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/opportunities/{id}")
+    class GetOpportunityByIdEndpoint {
+
+        @Test
+        @DisplayName("should return HTTP 200 OK when opportunity found")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(opportunityService.getOpportunityById(1L))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.getOpportunityById(1L);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return OpportunityResponse with all details")
+        void shouldReturnOpportunityResponse() {
+            // Arrange
+            when(opportunityService.getOpportunityById(1L))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            ResponseEntity<OpportunityResponse> response = 
+                    opportunityController.getOpportunityById(1L);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getId()).isEqualTo(1L);
+            assertThat(response.getBody().getTitle()).isEqualTo("UA Open Day Support");
+            assertThat(response.getBody().getDescription()).isEqualTo("Help with university open day activities");
+            assertThat(response.getBody().getPointsReward()).isEqualTo(50);
+            assertThat(response.getBody().getMaxVolunteers()).isEqualTo(10);
+            assertThat(response.getBody().getStatus()).isEqualTo(OpportunityStatus.DRAFT);
+            assertThat(response.getBody().getLocation()).isEqualTo("University Campus");
+            assertThat(response.getBody().getPromoter()).isNotNull();
+            assertThat(response.getBody().getRequiredSkills()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should delegate to OpportunityService.getOpportunityById()")
+        void shouldDelegateToOpportunityService() {
+            // Arrange
+            when(opportunityService.getOpportunityById(1L))
+                    .thenReturn(opportunityResponse);
+
+            // Act
+            opportunityController.getOpportunityById(1L);
+
+            // Assert
+            verify(opportunityService).getOpportunityById(1L);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityNotFoundException from service")
+        void shouldPropagateNotFoundException() {
+            // Arrange
+            when(opportunityService.getOpportunityById(999L))
+                    .thenThrow(new OpportunityNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityController.getOpportunityById(999L))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
         }
     }
 

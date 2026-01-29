@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   Calendar,
@@ -141,7 +141,15 @@ function OpportunitiesPage() {
             {/* Opportunities Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {opportunitiesData.content.map((opportunity) => (
-                <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                <Link
+                  key={opportunity.id}
+                  to="/opportunities/$opportunityId"
+                  params={{ opportunityId: String(opportunity.id) }}
+                  className="block"
+                  data-testid={`opportunity-card-link-${opportunity.id}`}
+                >
+                  <OpportunityCard opportunity={opportunity} />
+                </Link>
               ))}
             </div>
 
@@ -193,7 +201,10 @@ function OpportunityCard({ opportunity }: OpportunityCardProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow">
+    <Card
+      className="flex flex-col h-full hover:shadow-lg transition-shadow cursor-pointer"
+      data-testid={`opportunity-card-${opportunity.id}`}
+    >
       <CardHeader>
         <CardTitle className="text-lg line-clamp-2">{opportunity.title}</CardTitle>
       </CardHeader>
