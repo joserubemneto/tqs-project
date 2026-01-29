@@ -38,14 +38,21 @@ function RootComponent() {
                       </Button>
                     </Link>
                   )}
+                  <Link to="/profile">
+                    <Button variant="ghost" size="sm">
+                      My Profile
+                    </Button>
+                  </Link>
                   <div className="flex items-center gap-3">
                     <div className="text-sm text-right hidden sm:block">
                       <p className="font-medium text-foreground">{user.name}</p>
                       <p className="text-muted text-xs">{user.role}</p>
                     </div>
-                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                      {(user.name || user.email || 'U').charAt(0).toUpperCase()}
-                    </div>
+                    <Link to="/profile">
+                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity">
+                        {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    </Link>
                     <Button variant="ghost" size="sm" onClick={handleLogout}>
                       Logout
                     </Button>
