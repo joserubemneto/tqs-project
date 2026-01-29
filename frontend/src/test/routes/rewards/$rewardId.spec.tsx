@@ -411,4 +411,246 @@ describe('Reward Detail Page', () => {
       })
     })
   })
+
+  describe('Reward Types', () => {
+    it('should render UA_SERVICE type correctly', async () => {
+      const uaServiceReward: RewardResponse = {
+        ...mockReward,
+        type: 'UA_SERVICE',
+      }
+      mockGetReward.mockResolvedValue(uaServiceReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-type')).toBeInTheDocument()
+      })
+    })
+
+    it('should render MERCHANDISE type correctly', async () => {
+      const merchandiseReward: RewardResponse = {
+        ...mockReward,
+        type: 'MERCHANDISE',
+      }
+      mockGetReward.mockResolvedValue(merchandiseReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-type')).toBeInTheDocument()
+      })
+    })
+
+    it('should render CERTIFICATE type correctly', async () => {
+      const certificateReward: RewardResponse = {
+        ...mockReward,
+        type: 'CERTIFICATE',
+      }
+      mockGetReward.mockResolvedValue(certificateReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-type')).toBeInTheDocument()
+      })
+    })
+
+    it('should render OTHER type correctly', async () => {
+      const otherReward: RewardResponse = {
+        ...mockReward,
+        type: 'OTHER',
+      }
+      mockGetReward.mockResolvedValue(otherReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-type')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Inactive Reward Badge', () => {
+    it('should show Inactive badge for inactive rewards', async () => {
+      const inactiveReward: RewardResponse = {
+        ...mockReward,
+        active: false,
+      }
+      mockGetReward.mockResolvedValue(inactiveReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-availability')).toHaveTextContent('Unavailable')
+      })
+    })
+  })
+
+  describe('Partner Edge Cases', () => {
+    it('should not render partner website when not provided', async () => {
+      const rewardWithPartnerNoWebsite: RewardResponse = {
+        ...mockReward,
+        partner: {
+          id: 1,
+          name: 'UA Cafeteria',
+          description: 'University cafeteria partner',
+          active: true,
+          createdAt: '2024-01-01T00:00:00Z',
+          // No website
+        },
+      }
+      mockGetReward.mockResolvedValue(rewardWithPartnerNoWebsite)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('partner-name')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Visit website')).not.toBeInTheDocument()
+    })
+
+    it('should not render partner description when not provided', async () => {
+      const rewardWithPartnerNoDesc: RewardResponse = {
+        ...mockReward,
+        partner: {
+          id: 1,
+          name: 'UA Cafeteria',
+          website: 'https://cafeteria.ua.pt',
+          active: true,
+          createdAt: '2024-01-01T00:00:00Z',
+          // No description
+        },
+      }
+      mockGetReward.mockResolvedValue(rewardWithPartnerNoDesc)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('partner-name')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('University cafeteria partner')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Date Range Edge Cases', () => {
+    it('should render only availableFrom when availableUntil not provided', async () => {
+      const rewardWithOnlyFrom: RewardResponse = {
+        ...mockReward,
+        availableFrom: '2024-01-01T00:00:00Z',
+        availableUntil: undefined,
+      }
+      mockGetReward.mockResolvedValue(rewardWithOnlyFrom)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-available-from')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('reward-available-until')).not.toBeInTheDocument()
+    })
+
+    it('should render only availableUntil when availableFrom not provided', async () => {
+      const rewardWithOnlyUntil: RewardResponse = {
+        ...mockReward,
+        availableFrom: undefined,
+        availableUntil: '2024-12-31T23:59:59Z',
+      }
+      mockGetReward.mockResolvedValue(rewardWithOnlyUntil)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-available-until')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('reward-available-from')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Out of Stock', () => {
+    it('should show Unavailable when remainingQuantity is 0', async () => {
+      const outOfStockReward: RewardResponse = {
+        ...mockReward,
+        quantity: 100,
+        remainingQuantity: 0,
+      }
+      mockGetReward.mockResolvedValue(outOfStockReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-availability')).toHaveTextContent('Unavailable')
+      })
+    })
+
+    it('should not show Redeem button when out of stock', async () => {
+      const outOfStockReward: RewardResponse = {
+        ...mockReward,
+        quantity: 100,
+        remainingQuantity: 0,
+      }
+      mockGetReward.mockResolvedValue(outOfStockReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('This reward is currently not available for redemption.'),
+        ).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('button', { name: /Redeem Reward/ })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Error State Edge Cases', () => {
+    it('should not show Try Again button for 404 errors', async () => {
+      mockGetReward.mockRejectedValue(new Error('404: Not Found'))
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error-state')).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('button', { name: /Try Again/ })).not.toBeInTheDocument()
+    })
+
+    it('should show Back to rewards link on invalid ID', async () => {
+      renderTestPage('invalid')
+
+      expect(screen.getByRole('link', { name: /Back to rewards/ })).toBeInTheDocument()
+    })
+  })
+
+  describe('Quantity Display Edge Cases', () => {
+    it('should show 0 remaining for out of stock', async () => {
+      const outOfStockReward: RewardResponse = {
+        ...mockReward,
+        quantity: 100,
+        remainingQuantity: 0,
+      }
+      mockGetReward.mockResolvedValue(outOfStockReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-quantity')).toHaveTextContent('0 remaining')
+      })
+    })
+
+    it('should show 1 remaining when only one left', async () => {
+      const oneLeftReward: RewardResponse = {
+        ...mockReward,
+        quantity: 100,
+        remainingQuantity: 1,
+      }
+      mockGetReward.mockResolvedValue(oneLeftReward)
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reward-quantity')).toHaveTextContent('1 remaining')
+      })
+    })
+  })
+
+  describe('API Call', () => {
+    it('should call getReward with correct ID', async () => {
+      renderTestPage()
+
+      await waitFor(() => {
+        expect(mockGetReward).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('should not call getReward for invalid ID', async () => {
+      renderTestPage('invalid')
+
+      expect(mockGetReward).not.toHaveBeenCalled()
+    })
+  })
 })
