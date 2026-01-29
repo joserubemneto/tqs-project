@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { LoginForm } from '@/components/auth/LoginForm'
+import type { AuthResponse } from '@/lib/auth'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -8,8 +9,13 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate()
 
-  const handleSuccess = () => {
-    navigate({ to: '/' })
+  const handleSuccess = (response: AuthResponse) => {
+    // Redirect admin users to admin panel, others to home
+    if (response.role === 'ADMIN') {
+      navigate({ to: '/admin' })
+    } else {
+      navigate({ to: '/' })
+    }
   }
 
   return (

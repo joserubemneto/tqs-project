@@ -10,10 +10,11 @@ import {
   Input,
   Label,
 } from '@/components/ui'
-import { type LoginRequest, login, parseAuthError, setAuthToken } from '@/lib/auth'
+import { type AuthResponse, type LoginRequest, login, parseAuthError, setAuthToken } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface LoginFormProps {
-  onSuccess?: () => void
+  onSuccess?: (response: AuthResponse) => void
 }
 
 interface FormErrors {
@@ -23,6 +24,7 @@ interface FormErrors {
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
+  const { setUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
@@ -60,7 +62,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       const response = await login(data)
 
       setAuthToken(response.token)
-      onSuccess?.()
+      setUser({
+        id: response.id,
+        email: response.email,
+        name: response.name,
+        role: response.role,
+      })
+      onSuccess?.(response)
     } catch (error) {
       const message = await parseAuthError(error)
       setErrors({ general: message })

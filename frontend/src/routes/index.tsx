@@ -8,12 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
 function HomePage() {
+  const { user } = useAuth()
+
   return (
     <div className="container mx-auto px-4 pb-8">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
@@ -61,19 +64,31 @@ function HomePage() {
         </Card>
       </div>
 
-      <section className="mt-16 text-center">
-        <h2 className="text-2xl font-semibold mb-4">Ready to make a difference?</h2>
-        <div className="flex justify-center gap-4">
-          <Link to="/register">
-            <Button variant="primary" size="lg">
-              Get Started
+     {!user && (
+        <section className="mt-16 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Ready to make a difference?</h2>
+          <div className="flex justify-center gap-4">
+            <Link to="/register">
+              <Button variant="primary" size="lg">
+                Get Started
+              </Button>
+            </Link>
+            <Button variant="ghost" size="lg">
+              Learn More
             </Button>
-          </Link>
-          <Button variant="ghost" size="lg">
-            Learn More
+          </div>
+        </section>
+      )}
+
+      {user && (
+        <section className="mt-16 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Welcome back, {user.name}!</h2>
+          <p className="text-muted mb-6">You have 0 points. Start volunteering to earn more!</p>
+          <Button variant="primary" size="lg">
+            Find Opportunities
           </Button>
-        </div>
-      </section>
+        </section>
+      )} 
     </div>
   )
 }

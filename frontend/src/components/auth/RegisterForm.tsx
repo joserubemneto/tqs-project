@@ -11,15 +11,17 @@ import {
   Label,
 } from '@/components/ui'
 import {
+  type AuthResponse,
   parseAuthError,
   type RegisterRequest,
   register,
   setAuthToken,
   type UserRole,
 } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface RegisterFormProps {
-  onSuccess?: () => void
+  onSuccess?: (response: AuthResponse) => void
 }
 
 interface FormErrors {
@@ -30,6 +32,7 @@ interface FormErrors {
 }
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const { setUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -77,7 +80,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       const response = await register(data)
 
       setAuthToken(response.token)
-      onSuccess?.()
+      setUser({
+        id: response.id,
+        email: response.email,
+        name: response.name,
+        role: response.role,
+      })
+      onSuccess?.(response)
     } catch (error) {
       const message = await parseAuthError(error)
       setErrors({ general: message })

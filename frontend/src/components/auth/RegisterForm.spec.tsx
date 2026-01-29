@@ -17,6 +17,8 @@ vi.mock('@/lib/auth', () => ({
   register: vi.fn(),
   setAuthToken: vi.fn(),
   parseAuthError: vi.fn(),
+  getAuthToken: vi.fn(() => null),
+  clearAuthToken: vi.fn(),
 }))
 
 import { parseAuthError, register, setAuthToken } from '@/lib/auth'
@@ -242,6 +244,29 @@ describe('RegisterForm', () => {
 
       await waitFor(() => {
         expect(mockOnSuccess).toHaveBeenCalled()
+      })
+    })
+
+    it('should call onSuccess with full response including role', async () => {
+      const user = userEvent.setup()
+      const mockResponse = {
+        id: 1,
+        email: 'admin@ua.pt',
+        name: 'Admin User',
+        role: 'ADMIN' as const,
+        token: 'mock-token',
+      }
+      vi.mocked(register).mockResolvedValue(mockResponse)
+
+      render(<RegisterForm onSuccess={mockOnSuccess} />)
+
+      await user.type(screen.getByLabelText(/name/i), 'Admin User')
+      await user.type(screen.getByLabelText(/email/i), 'admin@ua.pt')
+      await user.type(screen.getByLabelText(/password/i), 'password123')
+      await user.click(screen.getByRole('button', { name: /create account/i }))
+
+      await waitFor(() => {
+        expect(mockOnSuccess).toHaveBeenCalledWith(mockResponse)
       })
     })
 
