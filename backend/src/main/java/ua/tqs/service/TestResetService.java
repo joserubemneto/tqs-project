@@ -156,4 +156,55 @@ public class TestResetService {
             volunteerId, englishId
         );
     }
+
+    /**
+     * Creates an opportunity with OPEN status for E2E testing.
+     * This allows testing volunteer applications without going through the normal flow.
+     */
+    @Transactional
+    public OpportunityResponse createOpenOpportunity(CreateOpportunityRequest request) {
+        // Validate end date is after start date
+        if (request.getEndDate().isBefore(request.getStartDate()) ||
+            request.getEndDate().isEqual(request.getStartDate())) {
+            throw new OpportunityValidationException("End date must be after start date");
+        }
+
+        // Validate at least one skill is required
+        if (request.getRequiredSkillIds() == null || request.getRequiredSkillIds().isEmpty()) {
+            throw new OpportunityValidationException("At least one skill is required");
+        }
+
+        // Get the promoter (use the default test promoter)
+        User promoter = userRepository.findByEmail("promoter@ua.pt")
+                .orElseThrow(() -> new UserNotFoundException("promoter@ua.pt"));
+
+        // Get and validate required skills
+        Set<Skill> requiredSkills = new HashSet<>();
+        for (Long skillId : request.getRequiredSkillIds()) {
+            Skill skill = skillRepository.findById(skillId)
+                    .orElseThrow(() -> new OpportunityValidationException(
+                            "Skill not found with id: " + skillId));
+            requiredSkills.add(skill);
+        }
+
+        // Build the opportunity entity with OPEN status
+        Opportunity opportunity = Opportunity.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .pointsReward(request.getPointsReward())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .maxVolunteers(request.getMaxVolunteers())
+                .status(OpportunityStatus.OPEN) // Set to OPEN for testing
+                .location(request.getLocation())
+                .promoter(promoter)
+                .requiredSkills(requiredSkills)
+                .build();
+
+        Opportunity savedOpportunity = opportunityRepository.save(opportunity);
+        log.info("Created OPEN opportunity '{}' (id: {}) for testing",
+                savedOpportunity.getTitle(), savedOpportunity.getId());
+
+        return OpportunityResponse.fromOpportunity(savedOpportunity);
+    }
 }

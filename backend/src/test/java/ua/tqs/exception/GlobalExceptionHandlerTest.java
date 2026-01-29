@@ -380,6 +380,70 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleAlreadyApplied()")
+    class HandleAlreadyApplied {
+
+        @Test
+        @DisplayName("should return CONFLICT status with error message")
+        void shouldReturnConflictStatus() {
+            AlreadyAppliedException exception = new AlreadyAppliedException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleAlreadyApplied(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(409);
+            assertThat(response.getBody().getError()).isEqualTo("Conflict");
+            assertThat(response.getBody().getMessage()).isEqualTo("Already applied");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "You have already applied to this opportunity";
+            AlreadyAppliedException exception = new AlreadyAppliedException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleAlreadyApplied(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleNoSpotsAvailable()")
+    class HandleNoSpotsAvailable {
+
+        @Test
+        @DisplayName("should return CONFLICT status with error message")
+        void shouldReturnConflictStatus() {
+            NoSpotsAvailableException exception = new NoSpotsAvailableException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleNoSpotsAvailable(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(409);
+            assertThat(response.getBody().getError()).isEqualTo("Conflict");
+            assertThat(response.getBody().getMessage()).isEqualTo("No spots available");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "All volunteer spots have been filled";
+            NoSpotsAvailableException exception = new NoSpotsAvailableException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleNoSpotsAvailable(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 
