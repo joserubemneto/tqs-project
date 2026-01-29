@@ -130,6 +130,13 @@ export async function getMyOpportunities(): Promise<OpportunityResponse[]> {
 }
 
 /**
+ * Get a single opportunity by ID (public endpoint)
+ */
+export async function getOpportunityById(id: number): Promise<OpportunityResponse> {
+  return api.get<OpportunityResponse>(`/opportunities/${id}`)
+}
+
+/**
  * Parse API error response for opportunity operations
  */
 export async function parseOpportunityError(error: unknown): Promise<string> {

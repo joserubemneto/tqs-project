@@ -16,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.exception.OpportunityNotFoundException;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.Opportunity;
@@ -412,6 +413,86 @@ class OpportunityServiceTest {
 
             // Assert
             assertThat(opportunities).hasSize(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("getOpportunityById()")
+    class GetOpportunityByIdMethod {
+
+        @Test
+        @DisplayName("should return opportunity when found")
+        void shouldReturnOpportunityWhenFound() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act
+            OpportunityResponse response = opportunityService.getOpportunityById(1L);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getTitle()).isEqualTo("UA Open Day Support");
+            assertThat(response.getDescription()).isEqualTo("Help with university open day activities");
+            assertThat(response.getPointsReward()).isEqualTo(50);
+            assertThat(response.getMaxVolunteers()).isEqualTo(10);
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.DRAFT);
+            assertThat(response.getLocation()).isEqualTo("University Campus");
+        }
+
+        @Test
+        @DisplayName("should return opportunity with promoter details")
+        void shouldReturnOpportunityWithPromoterDetails() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act
+            OpportunityResponse response = opportunityService.getOpportunityById(1L);
+
+            // Assert
+            assertThat(response.getPromoter()).isNotNull();
+            assertThat(response.getPromoter().getId()).isEqualTo(1L);
+            assertThat(response.getPromoter().getEmail()).isEqualTo("promoter@ua.pt");
+            assertThat(response.getPromoter().getName()).isEqualTo("Sample Promoter");
+        }
+
+        @Test
+        @DisplayName("should return opportunity with required skills")
+        void shouldReturnOpportunityWithRequiredSkills() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act
+            OpportunityResponse response = opportunityService.getOpportunityById(1L);
+
+            // Assert
+            assertThat(response.getRequiredSkills()).isNotNull();
+            assertThat(response.getRequiredSkills()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("should throw OpportunityNotFoundException when not found")
+        void shouldThrowExceptionWhenNotFound() {
+            // Arrange
+            when(opportunityRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.getOpportunityById(999L))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should call repository findById")
+        void shouldCallRepositoryFindById() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act
+            opportunityService.getOpportunityById(1L);
+
+            // Assert
+            verify(opportunityRepository).findById(1L);
         }
     }
 

@@ -80,6 +80,20 @@ public class OpportunityController {
         return ResponseEntity.ok(opportunityService.getFilteredOpportunities(filter, pageable));
     }
 
+    @GetMapping("/{id}")
+    @SecurityRequirements  // Override class-level security - this is a public endpoint
+    @Operation(summary = "Get opportunity by ID", description = "Get a single opportunity by its ID (public endpoint)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved opportunity"),
+            @ApiResponse(responseCode = "404", description = "Opportunity not found")
+    })
+    public ResponseEntity<OpportunityResponse> getOpportunityById(
+            @Parameter(description = "Opportunity ID")
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(opportunityService.getOpportunityById(id));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('PROMOTER') or hasRole('ADMIN')")
     @Operation(summary = "Create a new opportunity", description = "Create a new volunteering opportunity (PROMOTER or ADMIN only)")

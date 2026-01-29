@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.exception.OpportunityNotFoundException;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.Opportunity;
@@ -99,6 +100,17 @@ public class OpportunityService {
         return opportunities.stream()
                 .map(OpportunityResponse::fromOpportunity)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get a single opportunity by ID (public endpoint).
+     */
+    @Transactional(readOnly = true)
+    public OpportunityResponse getOpportunityById(Long id) {
+        Opportunity opportunity = opportunityRepository.findById(id)
+                .orElseThrow(() -> new OpportunityNotFoundException(id));
+        log.debug("Retrieved opportunity '{}' (id: {})", opportunity.getTitle(), id);
+        return OpportunityResponse.fromOpportunity(opportunity);
     }
 
     /**

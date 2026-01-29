@@ -4,6 +4,7 @@ import {
   createOpportunity,
   getMyOpportunities,
   getOpportunities,
+  getOpportunityById,
   parseOpportunityError,
 } from './opportunity'
 
@@ -564,6 +565,96 @@ describe('opportunity', () => {
       vi.mocked(api.get).mockRejectedValue(error)
 
       await expect(getMyOpportunities()).rejects.toThrow(error)
+    })
+  })
+
+  describe('getOpportunityById', () => {
+    const mockOpportunity = {
+      id: 1,
+      title: 'UA Open Day Support',
+      description: 'Help with university open day activities',
+      pointsReward: 50,
+      startDate: '2024-02-01T09:00:00Z',
+      endDate: '2024-02-07T17:00:00Z',
+      maxVolunteers: 10,
+      status: 'OPEN',
+      location: 'University Campus',
+      promoter: {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      requiredSkills: [
+        {
+          id: 1,
+          name: 'Communication',
+          category: 'COMMUNICATION',
+          description: 'Effective communication skills',
+        },
+      ],
+      createdAt: '2024-01-15T00:00:00Z',
+    }
+
+    it('should call api.get with correct endpoint', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockOpportunity)
+
+      const result = await getOpportunityById(1)
+
+      expect(api.get).toHaveBeenCalledWith('/opportunities/1')
+      expect(result).toEqual(mockOpportunity)
+    })
+
+    it('should return OpportunityResponse with all fields', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockOpportunity)
+
+      const result = await getOpportunityById(1)
+
+      expect(result.id).toBe(1)
+      expect(result.title).toBe('UA Open Day Support')
+      expect(result.description).toBe('Help with university open day activities')
+      expect(result.pointsReward).toBe(50)
+      expect(result.maxVolunteers).toBe(10)
+      expect(result.status).toBe('OPEN')
+      expect(result.location).toBe('University Campus')
+      expect(result.promoter.email).toBe('promoter@ua.pt')
+      expect(result.requiredSkills).toHaveLength(1)
+    })
+
+    it('should return opportunity with promoter details', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockOpportunity)
+
+      const result = await getOpportunityById(1)
+
+      expect(result.promoter).toBeDefined()
+      expect(result.promoter.id).toBe(1)
+      expect(result.promoter.name).toBe('Promoter User')
+      expect(result.promoter.email).toBe('promoter@ua.pt')
+    })
+
+    it('should return opportunity with required skills', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockOpportunity)
+
+      const result = await getOpportunityById(1)
+
+      expect(result.requiredSkills).toHaveLength(1)
+      expect(result.requiredSkills[0].name).toBe('Communication')
+    })
+
+    it('should propagate 404 error when opportunity not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Opportunity not found with id: 999')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getOpportunityById(999)).rejects.toThrow(error)
+    })
+
+    it('should propagate 500 error on server error', async () => {
+      const error = new ApiError(500, 'Internal Server Error', 'Server error')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getOpportunityById(1)).rejects.toThrow(error)
     })
   })
 
