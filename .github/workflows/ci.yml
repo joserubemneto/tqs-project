@@ -173,16 +173,13 @@ jobs:
             exit 1
           fi
           
-          # Create import info JSON specifying Generic (automated) test type
+          # Create import info JSON for test execution
           cat > /tmp/xray-e2e-info.json << EOF
           {
             "fields": {
               "project": { "key": "$JIRA_PROJECT_KEY" },
               "summary": "CI Test Execution - E2E Integration Tests (Playwright)",
               "issuetype": { "name": "Test Execution" }
-            },
-            "xrayFields": {
-              "testType": "Generic"
             }
           }
           EOF
