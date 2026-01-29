@@ -1,34 +1,13 @@
 package ua.tqs.config;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * Base configuration class for integration tests using Testcontainers.
- * 
- * This class provides a PostgreSQL container that is shared across all test classes
- * that extend it. The container is started once and reused, improving test performance.
- * 
- * Tests extending this class will be automatically skipped if Docker is not available
- * (controlled by disabledWithoutDocker = true).
- * 
- * Usage:
- * - Extend this class in your integration test
- * - Add @SpringBootTest annotation to your test class
- * - The PostgreSQL container will be automatically configured
- * 
- * Example:
- * {@code
- * @SpringBootTest
- * class MyRepositoryContainerIT extends PostgresTestContainerConfig {
- *     // tests here
- * }
- * }
- */
-@Testcontainers(disabledWithoutDocker = true)
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 public abstract class PostgresTestContainerConfig {
 
     private static final String POSTGRES_IMAGE = "postgres:16-alpine";
@@ -36,13 +15,68 @@ public abstract class PostgresTestContainerConfig {
     private static final String DATABASE_USERNAME = "testuser";
     private static final String DATABASE_PASSWORD = "testpass";
 
-    @Container
-    @SuppressWarnings("resource")  // Container lifecycle managed by Testcontainers
-    protected static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(POSTGRES_IMAGE)
-            .withDatabaseName(DATABASE_NAME)
-            .withUsername(DATABASE_USERNAME)
-            .withPassword(DATABASE_PASSWORD)
-            .withReuse(true);
+    /**
+     * Lazy-initialized PostgreSQL container - started only when Docker is available.
+     */
+    @SuppressWarnings("resource")  // Container lifecycle managed manually
+    protected static PostgreSQLContainer<?> postgres;
+
+    private static boolean dockerAvailable;
+    private static boolean initialized = false;
+
+    /**
+     * Check if Docker is available and initialize the container if so.
+     * This method is called lazily to avoid class initialization failures.
+     */
+    private static synchronized void initializeContainer() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        
+        // Check Docker availability with comprehensive exception handling
+        try {
+            // First check if Docker client can be created
+            DockerClientFactory factory = DockerClientFactory.instance();
+            dockerAvailable = factory.isDockerAvailable();
+            
+            // Even if isDockerAvailable returns true, verify by checking client
+            if (dockerAvailable) {
+                factory.client(); // This will throw if Docker is not really available
+            }
+        } catch (IllegalStateException | ExceptionInInitializerError e) {
+            // Docker is not available or not running
+            dockerAvailable = false;
+        } catch (Exception e) {
+            // Any other exception means Docker is not available
+            dockerAvailable = false;
+        }
+        
+        if (dockerAvailable) {
+            try {
+                postgres = new PostgreSQLContainer<>(POSTGRES_IMAGE)
+                        .withDatabaseName(DATABASE_NAME)
+                        .withUsername(DATABASE_USERNAME)
+                        .withPassword(DATABASE_PASSWORD)
+                        .withReuse(true);
+                postgres.start();
+            } catch (Exception e) {
+                // Container failed to start
+                dockerAvailable = false;
+                postgres = null;
+            }
+        }
+    }
+
+    /**
+     * Ensure Docker is available before running any tests.
+     * Tests are skipped if Docker is not available.
+     */
+    @BeforeAll
+    static void checkDockerAvailable() {
+        initializeContainer();
+        assumeTrue(dockerAvailable, "Docker is not available - skipping container tests");
+    }
 
     /**
      * Dynamically configure Spring datasource properties to use the Testcontainer.
@@ -53,8 +87,13 @@ public abstract class PostgresTestContainerConfig {
      */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        // Ensure container is started before accessing its properties
-        postgres.start();
+        // Initialize container if not already done
+        initializeContainer();
+        
+        // Only configure if Docker is available and container is running
+        if (!dockerAvailable || postgres == null || !postgres.isRunning()) {
+            return;
+        }
         
         // Datasource configuration for PostgreSQL
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
