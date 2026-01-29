@@ -19,6 +19,12 @@ spring:
     # Defer datasource initialization to ensure proper startup order
     defer-datasource-initialization: true
 
+  # SQL initialization - seeds test data after Hibernate creates schema
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data-integration-test.sql
+
   # Flyway disabled for E2E tests - using Hibernate ddl-auto: create instead
   # This avoids conflicts between Flyway migrations and Hibernate schema generation
   # and ensures tables are created even when spring-boot:run doesn't trigger Flyway
