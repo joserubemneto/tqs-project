@@ -1,6 +1,8 @@
 import { waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OpportunityPageResponse, OpportunityResponse } from '@/lib/opportunity'
+import type { SkillResponse } from '@/lib/profile'
 import { render, screen } from '@/test/test-utils'
 
 // Mock TanStack Router
@@ -34,6 +36,22 @@ vi.mock('@/lib/opportunity', async () => {
     getOpportunities: () => mockGetOpportunities(),
   }
 })
+
+// Mock profile API for skills (used by OpportunityFilters)
+const mockGetSkills = vi.fn()
+
+vi.mock('@/lib/profile', async () => {
+  const actual = await vi.importActual('@/lib/profile')
+  return {
+    ...actual,
+    getSkills: () => mockGetSkills(),
+  }
+})
+
+const mockSkills: SkillResponse[] = [
+  { id: 1, name: 'Communication', category: 'COMMUNICATION', description: 'Communication skills' },
+  { id: 2, name: 'Leadership', category: 'LEADERSHIP', description: 'Leadership skills' },
+]
 
 // Import after mocks are set up
 import { Route } from '@/routes/opportunities/index'
@@ -95,6 +113,7 @@ const emptyPageResponse: OpportunityPageResponse = {
 describe('OpportunitiesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetSkills.mockResolvedValue(mockSkills)
   })
 
   describe('Rendering', () => {
@@ -338,9 +357,180 @@ describe('OpportunitiesPage', () => {
       expect(screen.queryByText(/page 1 of 1/i)).not.toBeInTheDocument()
     })
   })
+
+  describe('Filters', () => {
+    it('should render filter toggle button', async () => {
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      expect(screen.getByTestId('filter-toggle')).toBeInTheDocument()
+    })
+
+    it('should expand filter panel when clicking toggle', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filters-panel')).toBeInTheDocument()
+      })
+    })
+
+    it('should show filter by skills section when expanded', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByText('Filter by Skills')).toBeInTheDocument()
+      })
+    })
+
+    it('should show date filter inputs when expanded', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-start-date-from')).toBeInTheDocument()
+        expect(screen.getByTestId('filter-start-date-to')).toBeInTheDocument()
+      })
+    })
+
+    it('should show points filter inputs when expanded', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-min-points')).toBeInTheDocument()
+        expect(screen.getByTestId('filter-max-points')).toBeInTheDocument()
+      })
+    })
+
+    it('should show skills from API in filter panel', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(mockPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('skill-filter-1')).toBeInTheDocument()
+        expect(screen.getByTestId('skill-filter-2')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Empty State with Filters', () => {
+    it('should show filter-specific empty message when filters are active', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(emptyPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      })
+
+      // Apply a filter by clicking a skill
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('skill-filter-1')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('skill-filter-1'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/no opportunities match your filters/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should show clear filters button in empty state when filters are active', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(emptyPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      })
+
+      // Apply a filter
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('skill-filter-1')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('skill-filter-1'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('clear-filters-empty')).toBeInTheDocument()
+      })
+    })
+
+    it('should not show clear filters button when no filters active', async () => {
+      mockGetOpportunities.mockResolvedValue(emptyPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('clear-filters-empty')).not.toBeInTheDocument()
+    })
+
+    it('should show adjust filter criteria message when filters active', async () => {
+      const user = userEvent.setup()
+      mockGetOpportunities.mockResolvedValue(emptyPageResponse)
+
+      render(<OpportunitiesPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      })
+
+      // Apply a filter
+      await user.click(screen.getByTestId('filter-toggle'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('skill-filter-1')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('skill-filter-1'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/try adjusting your filter criteria/i)).toBeInTheDocument()
+      })
+    })
+  })
 })
 
 describe('OpportunitiesPage Route', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetSkills.mockResolvedValue(mockSkills)
+  })
+
   it('should have route options defined', () => {
     expect(Route.options).toBeDefined()
   })

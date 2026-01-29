@@ -142,13 +142,22 @@ jobs:
       - name: Show Docker logs on failure
         if: failure()
         run: |
-          echo "=== Backend logs ==="
-          docker compose -f docker-compose.e2e.yml logs backend-e2e
-          echo "=== Frontend logs ==="
-          docker compose -f docker-compose.e2e.yml logs frontend-e2e
-          echo "=== Database logs ==="
-          docker compose -f docker-compose.e2e.yml logs postgres-e2e
+          if [ -f docker-compose.e2e.yml ]; then
+            echo "=== Backend logs ==="
+            docker compose -f docker-compose.e2e.yml logs backend-e2e
+            echo "=== Frontend logs ==="
+            docker compose -f docker-compose.e2e.yml logs frontend-e2e
+            echo "=== Database logs ==="
+            docker compose -f docker-compose.e2e.yml logs postgres-e2e
+          else
+            echo "docker-compose.e2e.yml not found, skipping log collection"
+          fi
 
       - name: Cleanup Docker Compose
         if: always()
-        run: docker compose -f docker-compose.e2e.yml down -v
+        run: |
+          if [ -f docker-compose.e2e.yml ]; then
+            docker compose -f docker-compose.e2e.yml down -v
+          else
+            echo "docker-compose.e2e.yml not found, skipping cleanup"
+          fi
