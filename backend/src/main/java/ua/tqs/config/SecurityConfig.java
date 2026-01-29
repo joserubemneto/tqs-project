@@ -30,6 +30,8 @@ public class SecurityConfig {
         "/api/health",
         "/api/auth/**",
         "/api/opportunities",  // Public endpoint for viewing opportunities
+        "/api/opportunities/*/application-count",  // Public endpoint for viewing application count
+        "/api/skills",  // Public endpoint for viewing available skills
         "/api/test/**",  // Test endpoints (only available in integration-test profile)
         "/api-docs/**",
         "/swagger-ui/**",
@@ -62,7 +64,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 

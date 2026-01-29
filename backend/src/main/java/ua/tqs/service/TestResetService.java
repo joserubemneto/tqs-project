@@ -6,6 +6,20 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.exception.OpportunityValidationException;
+import ua.tqs.exception.UserNotFoundException;
+import ua.tqs.model.Opportunity;
+import ua.tqs.model.Skill;
+import ua.tqs.model.User;
+import ua.tqs.model.enums.OpportunityStatus;
+import ua.tqs.repository.OpportunityRepository;
+import ua.tqs.repository.SkillRepository;
+import ua.tqs.repository.UserRepository;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Service for resetting the database to its initial state during E2E tests.
@@ -18,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class TestResetService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final OpportunityRepository opportunityRepository;
+    private final UserRepository userRepository;
+    private final SkillRepository skillRepository;
 
     // BCrypt hash of "password" - same as in data-integration-test.sql
     private static final String PASSWORD_HASH = "$2a$10$w/RTKkG/tQ00sCIK4ST9pOBE4disgBStZmOe7eHqP.QPB.8udzWeG";
@@ -155,5 +172,56 @@ public class TestResetService {
             "INSERT INTO user_skills (user_id, skill_id) VALUES (?, ?)",
             volunteerId, englishId
         );
+    }
+
+    /**
+     * Creates an opportunity with OPEN status for E2E testing.
+     * This allows testing volunteer applications without going through the normal flow.
+     */
+    @Transactional
+    public OpportunityResponse createOpenOpportunity(CreateOpportunityRequest request) {
+        // Validate end date is after start date
+        if (request.getEndDate().isBefore(request.getStartDate()) ||
+            request.getEndDate().isEqual(request.getStartDate())) {
+            throw new OpportunityValidationException("End date must be after start date");
+        }
+
+        // Validate at least one skill is required
+        if (request.getRequiredSkillIds() == null || request.getRequiredSkillIds().isEmpty()) {
+            throw new OpportunityValidationException("At least one skill is required");
+        }
+
+        // Get the promoter (use the default test promoter)
+        User promoter = userRepository.findByEmail("promoter@ua.pt")
+                .orElseThrow(() -> new UserNotFoundException("promoter@ua.pt"));
+
+        // Get and validate required skills
+        Set<Skill> requiredSkills = new HashSet<>();
+        for (Long skillId : request.getRequiredSkillIds()) {
+            Skill skill = skillRepository.findById(skillId)
+                    .orElseThrow(() -> new OpportunityValidationException(
+                            "Skill not found with id: " + skillId));
+            requiredSkills.add(skill);
+        }
+
+        // Build the opportunity entity with OPEN status
+        Opportunity opportunity = Opportunity.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .pointsReward(request.getPointsReward())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .maxVolunteers(request.getMaxVolunteers())
+                .status(OpportunityStatus.OPEN) // Set to OPEN for testing
+                .location(request.getLocation())
+                .promoter(promoter)
+                .requiredSkills(requiredSkills)
+                .build();
+
+        Opportunity savedOpportunity = opportunityRepository.save(opportunity);
+        log.info("Created OPEN opportunity '{}' (id: {}) for testing",
+                savedOpportunity.getTitle(), savedOpportunity.getId());
+
+        return OpportunityResponse.fromOpportunity(savedOpportunity);
     }
 }

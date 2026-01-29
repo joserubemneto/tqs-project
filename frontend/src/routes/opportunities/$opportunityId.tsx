@@ -15,6 +15,8 @@ import {
   Users,
 } from 'lucide-react'
 import { useState } from 'react'
+import { ApplicationsManagement } from '@/components/opportunity/ApplicationsManagement'
+import { ApplyButton } from '@/components/opportunity/ApplyButton'
 import { CancelOpportunityDialog } from '@/components/opportunity/CancelOpportunityDialog'
 import { EditOpportunityModal } from '@/components/opportunity/EditOpportunityModal'
 import {
@@ -27,6 +29,11 @@ import {
   CardTitle,
 } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  type ApplicationResponse,
+  getApprovedApplicationCount,
+  getMyApplicationForOpportunity,
+} from '@/lib/application'
 import { getOpportunityById, type OpportunityResponse } from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/$opportunityId')({
@@ -51,6 +58,21 @@ function OpportunityDetailPage() {
   } = useQuery({
     queryKey: ['opportunity', id],
     queryFn: () => getOpportunityById(id),
+    enabled: !Number.isNaN(id),
+  })
+
+  // Fetch user's application for this opportunity (only for volunteers)
+  const isVolunteer = user?.role === 'VOLUNTEER'
+  const { data: myApplication } = useQuery({
+    queryKey: ['my-application', id],
+    queryFn: () => getMyApplicationForOpportunity(id),
+    enabled: !Number.isNaN(id) && isVolunteer,
+  })
+
+  // Fetch approved application count
+  const { data: approvedCount = 0 } = useQuery({
+    queryKey: ['application-count', id],
+    queryFn: () => getApprovedApplicationCount(id),
     enabled: !Number.isNaN(id),
   })
 
@@ -79,6 +101,13 @@ function OpportunityDetailPage() {
   const handleCancelSuccess = (cancelledOpportunity: OpportunityResponse) => {
     // Update the cache with the new data
     queryClient.setQueryData(['opportunity', id], cancelledOpportunity)
+  }
+
+  const handleApplicationSuccess = (application: ApplicationResponse) => {
+    // Update the application cache
+    queryClient.setQueryData(['my-application', id], application)
+    // Invalidate the count to refresh it
+    queryClient.invalidateQueries({ queryKey: ['application-count', id] })
   }
 
   const formatDate = (dateString: string) => {
@@ -381,6 +410,33 @@ function OpportunityDetailPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Apply Section - Only show if user is not the promoter/admin managing this */}
+          {!canManage && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Apply</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ApplyButton
+                  opportunityId={opportunity.id}
+                  opportunityStatus={opportunity.status}
+                  maxVolunteers={opportunity.maxVolunteers}
+                  approvedCount={approvedCount}
+                  existingApplication={myApplication ?? null}
+                  onApplicationSuccess={handleApplicationSuccess}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Applications Management - Only show if user is the promoter/admin */}
+          {canManage && (
+            <ApplicationsManagement
+              opportunityId={opportunity.id}
+              maxVolunteers={opportunity.maxVolunteers}
+            />
+          )}
         </div>
       </div>
 

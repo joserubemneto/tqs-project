@@ -36,6 +36,21 @@ vi.mock('@/lib/opportunity', async () => {
   }
 })
 
+// Mock application API
+const mockGetApplicationsForOpportunity = vi.fn()
+const mockGetApprovedApplicationCount = vi.fn()
+const mockGetMyApplicationForOpportunity = vi.fn()
+
+vi.mock('@/lib/application', async () => {
+  const actual = await vi.importActual('@/lib/application')
+  return {
+    ...actual,
+    getApplicationsForOpportunity: (id: number) => mockGetApplicationsForOpportunity(id),
+    getApprovedApplicationCount: (id: number) => mockGetApprovedApplicationCount(id),
+    getMyApplicationForOpportunity: (id: number) => mockGetMyApplicationForOpportunity(id),
+  }
+})
+
 // Mock useAuth hook
 const mockUseAuth = vi.fn()
 
@@ -93,6 +108,10 @@ describe('OpportunityDetailPage', () => {
     vi.clearAllMocks()
     // Default: no authenticated user
     mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false })
+    // Default mocks for application API
+    mockGetApplicationsForOpportunity.mockResolvedValue([])
+    mockGetApprovedApplicationCount.mockResolvedValue(0)
+    mockGetMyApplicationForOpportunity.mockResolvedValue(null)
   })
 
   describe('Loading State', () => {
@@ -483,6 +502,115 @@ describe('OpportunityDetailPage', () => {
 
       // Edit should not be available for FULL status
       expect(screen.queryByTestId('edit-opportunity-button')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('ApplicationsManagement integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetApplicationsForOpportunity.mockResolvedValue([])
+    mockGetApprovedApplicationCount.mockResolvedValue(0)
+    mockGetMyApplicationForOpportunity.mockResolvedValue(null)
+  })
+
+  it('should show Applications section for opportunity promoter', async () => {
+    mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 1, // Same as promoter ID
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+    })
+
+    render(<OpportunityDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /applications/i })).toBeInTheDocument()
+    })
+  })
+
+  it('should show Applications section for admin user', async () => {
+    mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 999, // Different from promoter ID
+        email: 'admin@ua.pt',
+        name: 'Admin User',
+        role: 'ADMIN',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+    })
+
+    render(<OpportunityDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /applications/i })).toBeInTheDocument()
+    })
+  })
+
+  it('should not show Applications section for volunteer', async () => {
+    mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 999,
+        email: 'volunteer@ua.pt',
+        name: 'Volunteer User',
+        role: 'VOLUNTEER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+    })
+
+    render(<OpportunityDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+    })
+
+    // Applications section should not be visible for volunteers (non-owners)
+    expect(screen.queryByRole('heading', { name: /^applications$/i })).not.toBeInTheDocument()
+  })
+
+  it('should not show Applications section for unauthenticated user', async () => {
+    mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false })
+
+    render(<OpportunityDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByRole('heading', { name: /^applications$/i })).not.toBeInTheDocument()
+  })
+
+  it('should show Apply section for volunteer instead of Applications', async () => {
+    mockGetOpportunityById.mockResolvedValue(mockOpportunity)
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 999,
+        email: 'volunteer@ua.pt',
+        name: 'Volunteer User',
+        role: 'VOLUNTEER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+    })
+
+    render(<OpportunityDetailPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /apply/i })).toBeInTheDocument()
     })
   })
 })

@@ -50,6 +50,13 @@ function RootComponent() {
                       </Button>
                     </Link>
                   )}
+                  {user.role === 'VOLUNTEER' && (
+                    <Link to="/my-applications">
+                      <Button variant="ghost" size="sm">
+                        My Applications
+                      </Button>
+                    </Link>
+                  )}
                   <Link to="/profile">
                     <Button variant="ghost" size="sm">
                       My Profile

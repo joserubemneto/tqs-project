@@ -176,6 +176,18 @@ describe('RootComponent', () => {
       expect(screen.queryByText('Create Opportunity')).not.toBeInTheDocument()
     })
 
+    it('should show My Applications button for volunteers', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('My Applications')).toBeInTheDocument()
+    })
+
+    it('should have correct link for My Applications', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByTestId('link-/my-applications')).toBeInTheDocument()
+    })
+
     it('should not show Sign In or Get Started buttons', () => {
       render(<RootComponent />)
 
@@ -268,6 +280,12 @@ describe('RootComponent', () => {
 
       expect(screen.getByTestId('link-/opportunities/create')).toBeInTheDocument()
     })
+
+    it('should not show My Applications button for admin users', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('My Applications')).not.toBeInTheDocument()
+    })
   })
 
   describe('logged in as PROMOTER', () => {
@@ -322,6 +340,12 @@ describe('RootComponent', () => {
 
       expect(screen.getByText('Logout')).toBeInTheDocument()
     })
+
+    it('should not show My Applications button for promoters', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('My Applications')).not.toBeInTheDocument()
+    })
   })
 
   describe('logged in as PARTNER', () => {
@@ -357,6 +381,12 @@ describe('RootComponent', () => {
       render(<RootComponent />)
 
       expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
+    })
+
+    it('should not show My Applications button for partners', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('My Applications')).not.toBeInTheDocument()
     })
   })
 

@@ -380,6 +380,134 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleAlreadyApplied()")
+    class HandleAlreadyApplied {
+
+        @Test
+        @DisplayName("should return CONFLICT status with error message")
+        void shouldReturnConflictStatus() {
+            AlreadyAppliedException exception = new AlreadyAppliedException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleAlreadyApplied(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(409);
+            assertThat(response.getBody().getError()).isEqualTo("Conflict");
+            assertThat(response.getBody().getMessage()).isEqualTo("Already applied");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "You have already applied to this opportunity";
+            AlreadyAppliedException exception = new AlreadyAppliedException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleAlreadyApplied(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleNoSpotsAvailable()")
+    class HandleNoSpotsAvailable {
+
+        @Test
+        @DisplayName("should return CONFLICT status with error message")
+        void shouldReturnConflictStatus() {
+            NoSpotsAvailableException exception = new NoSpotsAvailableException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleNoSpotsAvailable(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(409);
+            assertThat(response.getBody().getError()).isEqualTo("Conflict");
+            assertThat(response.getBody().getMessage()).isEqualTo("No spots available");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "All volunteer spots have been filled";
+            NoSpotsAvailableException exception = new NoSpotsAvailableException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleNoSpotsAvailable(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleApplicationNotFound()")
+    class HandleApplicationNotFound {
+
+        @Test
+        @DisplayName("should return NOT_FOUND status with error message")
+        void shouldReturnNotFoundStatus() {
+            ApplicationNotFoundException exception = new ApplicationNotFoundException(123L);
+
+            ResponseEntity<ErrorResponse> response = handler.handleApplicationNotFound(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(404);
+            assertThat(response.getBody().getError()).isEqualTo("Not Found");
+            assertThat(response.getBody().getMessage()).isEqualTo("Application not found with id: 123");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Application with given ID does not exist";
+            ApplicationNotFoundException exception = new ApplicationNotFoundException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleApplicationNotFound(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleInvalidApplicationStatus()")
+    class HandleInvalidApplicationStatus {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            InvalidApplicationStatusException exception = new InvalidApplicationStatusException("Cannot approve application with status: APPROVED");
+
+            ResponseEntity<ErrorResponse> response = handler.handleInvalidApplicationStatus(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("Cannot approve application with status: APPROVED");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Cannot reject application with status: REJECTED";
+            InvalidApplicationStatusException exception = new InvalidApplicationStatusException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleInvalidApplicationStatus(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 
