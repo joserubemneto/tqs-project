@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@/test/test-utils'
 import type { SkillResponse } from '@/lib/profile'
+import { render, screen } from '@/test/test-utils'
 import { SkillSelector } from './skill-selector'
 
 describe('SkillSelector', () => {

@@ -106,7 +106,6 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
   }
 
-
   if (isLoadingProfile) {
     return (
       <Card className="w-full max-w-2xl mx-auto">

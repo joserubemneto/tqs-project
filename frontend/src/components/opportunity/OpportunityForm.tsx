@@ -181,7 +181,6 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
     }
   }
 
-
   if (isLoadingSkills) {
     return (
       <Card className="w-full max-w-2xl mx-auto">

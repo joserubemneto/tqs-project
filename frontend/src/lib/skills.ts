@@ -17,9 +17,7 @@ export const SKILL_CATEGORY_LABELS: Record<SkillCategory, string> = {
 /**
  * Groups skills by their category
  */
-export function groupSkillsByCategory(
-  skills: SkillResponse[],
-): Record<string, SkillResponse[]> {
+export function groupSkillsByCategory(skills: SkillResponse[]): Record<string, SkillResponse[]> {
   return skills.reduce(
     (acc, skill) => {
       if (!acc[skill.category]) {
