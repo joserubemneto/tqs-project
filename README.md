@@ -98,3 +98,6 @@ https://sonarcloud.io/summary/new_code?id=joserubemneto_tqs-project
 
 When running locally, Swagger UI is available at:
 - http://localhost:8080/swagger-ui.html
+
+You can also check it in production:
+https://volunteering-api.onrender.com/swagger-ui/index.html
