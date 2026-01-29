@@ -32,6 +32,8 @@ public class SecurityConfig {
         "/api/opportunities",  // Public endpoint for viewing opportunities
         "/api/opportunities/*/application-count",  // Public endpoint for viewing application count
         "/api/skills",  // Public endpoint for viewing available skills
+        "/api/rewards",  // Public endpoint for viewing available rewards
+        "/api/rewards/*",  // Public endpoint for viewing single reward
         "/api/test/**",  // Test endpoints (only available in integration-test profile)
         "/api-docs/**",
         "/swagger-ui/**",
