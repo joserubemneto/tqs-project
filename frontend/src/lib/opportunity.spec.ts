@@ -3,10 +3,12 @@ import { ApiError } from './api'
 import {
   cancelOpportunity,
   createOpportunity,
+  getAdminOpportunities,
   getMyOpportunities,
   getOpportunities,
   getOpportunityById,
   parseOpportunityError,
+  publishOpportunity,
   updateOpportunity,
 } from './opportunity'
 
@@ -918,6 +920,212 @@ describe('opportunity', () => {
       vi.mocked(api.post).mockRejectedValue(error)
 
       await expect(cancelOpportunity(999)).rejects.toThrow(error)
+    })
+  })
+
+  describe('publishOpportunity', () => {
+    const mockPublishedResponse = {
+      id: 1,
+      title: 'Published Event',
+      description: 'This event has been published',
+      pointsReward: 50,
+      startDate: '2024-02-01T09:00:00Z',
+      endDate: '2024-02-07T17:00:00Z',
+      maxVolunteers: 10,
+      status: 'OPEN',
+      location: 'University Campus',
+      promoter: {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      requiredSkills: [],
+      createdAt: '2024-01-15T00:00:00Z',
+    }
+
+    it('should call api.post with correct endpoint', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockPublishedResponse)
+
+      const result = await publishOpportunity(1)
+
+      expect(api.post).toHaveBeenCalledWith('/opportunities/1/publish', {})
+      expect(result).toEqual(mockPublishedResponse)
+    })
+
+    it('should return published OpportunityResponse with OPEN status', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockPublishedResponse)
+
+      const result = await publishOpportunity(1)
+
+      expect(result.id).toBe(1)
+      expect(result.status).toBe('OPEN')
+    })
+
+    it('should propagate 400 error for non-DRAFT status', async () => {
+      const error = new ApiError(400, 'Bad Request', 'Only DRAFT opportunities can be published')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(publishOpportunity(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not owner or admin', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(publishOpportunity(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 404 error when opportunity not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Opportunity not found with id: 999')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(publishOpportunity(999)).rejects.toThrow(error)
+    })
+  })
+
+  describe('getAdminOpportunities', () => {
+    const mockOpportunity = {
+      id: 1,
+      title: 'Admin View Opportunity',
+      description: 'Opportunity for admin view',
+      pointsReward: 50,
+      startDate: '2024-02-01T09:00:00Z',
+      endDate: '2024-02-07T17:00:00Z',
+      maxVolunteers: 10,
+      status: 'DRAFT',
+      location: 'University Campus',
+      promoter: {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      requiredSkills: [],
+      createdAt: '2024-01-15T00:00:00Z',
+    }
+
+    const mockPageResponse = {
+      content: [mockOpportunity],
+      totalElements: 1,
+      totalPages: 1,
+      size: 10,
+      number: 0,
+    }
+
+    it('should call api.get with correct endpoint without params', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      const result = await getAdminOpportunities()
+
+      expect(api.get).toHaveBeenCalledWith('/admin/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          status: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+        },
+      })
+      expect(result).toEqual(mockPageResponse)
+    })
+
+    it('should call api.get with pagination params', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getAdminOpportunities({ page: 2, size: 20 })
+
+      expect(api.get).toHaveBeenCalledWith('/admin/opportunities', {
+        params: {
+          page: 2,
+          size: 20,
+          status: undefined,
+          sortBy: undefined,
+          sortDir: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with status filter', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getAdminOpportunities({ status: 'DRAFT' })
+
+      expect(api.get).toHaveBeenCalledWith('/admin/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          status: 'DRAFT',
+          sortBy: undefined,
+          sortDir: undefined,
+        },
+      })
+    })
+
+    it('should call api.get with sorting params', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getAdminOpportunities({ sortBy: 'createdAt', sortDir: 'desc' })
+
+      expect(api.get).toHaveBeenCalledWith('/admin/opportunities', {
+        params: {
+          page: undefined,
+          size: undefined,
+          status: undefined,
+          sortBy: 'createdAt',
+          sortDir: 'desc',
+        },
+      })
+    })
+
+    it('should call api.get with all params', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      await getAdminOpportunities({
+        page: 0,
+        size: 10,
+        status: 'OPEN',
+        sortBy: 'startDate',
+        sortDir: 'asc',
+      })
+
+      expect(api.get).toHaveBeenCalledWith('/admin/opportunities', {
+        params: {
+          page: 0,
+          size: 10,
+          status: 'OPEN',
+          sortBy: 'startDate',
+          sortDir: 'asc',
+        },
+      })
+    })
+
+    it('should return OpportunityPageResponse', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockPageResponse)
+
+      const result = await getAdminOpportunities()
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].title).toBe('Admin View Opportunity')
+      expect(result.totalElements).toBe(1)
+    })
+
+    it('should propagate 401 error when not authenticated', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid token')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getAdminOpportunities()).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not admin', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.get).mockRejectedValue(error)
+
+      await expect(getAdminOpportunities()).rejects.toThrow(error)
     })
   })
 })

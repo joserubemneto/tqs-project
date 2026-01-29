@@ -636,6 +636,91 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleInsufficientPoints()")
+    class HandleInsufficientPoints {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            InsufficientPointsException exception = new InsufficientPointsException("You need 100 points but only have 50");
+
+            ResponseEntity<ErrorResponse> response = handler.handleInsufficientPoints(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("You need 100 points but only have 50");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Insufficient points to redeem this reward";
+            InsufficientPointsException exception = new InsufficientPointsException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleInsufficientPoints(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleRewardNotAvailable()")
+    class HandleRewardNotAvailable {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            RewardNotAvailableException exception = new RewardNotAvailableException("This reward is no longer active");
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotAvailable(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("This reward is no longer active");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should handle out of stock message")
+        void shouldHandleOutOfStockMessage() {
+            RewardNotAvailableException exception = new RewardNotAvailableException("This reward is out of stock");
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotAvailable(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo("This reward is out of stock");
+        }
+
+        @Test
+        @DisplayName("should handle not yet available message")
+        void shouldHandleNotYetAvailableMessage() {
+            RewardNotAvailableException exception = new RewardNotAvailableException("This reward is not yet available");
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotAvailable(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo("This reward is not yet available");
+        }
+
+        @Test
+        @DisplayName("should handle expired reward message")
+        void shouldHandleExpiredRewardMessage() {
+            RewardNotAvailableException exception = new RewardNotAvailableException("This reward is no longer available");
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotAvailable(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo("This reward is no longer available");
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 

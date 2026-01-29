@@ -114,6 +114,13 @@ export function isAdmin(): boolean {
 }
 
 /**
+ * Check if current user is a volunteer
+ */
+export function isVolunteer(): boolean {
+  return getUserRoleFromToken() === 'VOLUNTEER'
+}
+
+/**
  * Parse API error response
  */
 export async function parseAuthError(error: unknown): Promise<string> {

@@ -51,11 +51,26 @@ function RootComponent() {
                     </Link>
                   )}
                   {user.role === 'VOLUNTEER' && (
-                    <Link to="/my-applications">
-                      <Button variant="ghost" size="sm">
-                        My Applications
-                      </Button>
-                    </Link>
+                    <>
+                      <Link to="/rewards">
+                        <Button variant="ghost" size="sm" className="gap-2">
+                          <span className="text-yellow-600 font-semibold">
+                            {user.points ?? 0} pts
+                          </span>
+                          Rewards
+                        </Button>
+                      </Link>
+                      <Link to="/rewards/my-redemptions">
+                        <Button variant="ghost" size="sm">
+                          My Redemptions
+                        </Button>
+                      </Link>
+                      <Link to="/my-applications">
+                        <Button variant="ghost" size="sm">
+                          My Applications
+                        </Button>
+                      </Link>
+                    </>
                   )}
                   <Link to="/profile">
                     <Button variant="ghost" size="sm">

@@ -116,6 +116,38 @@ export async function deleteReward(id: number): Promise<void> {
   return api.delete(`/admin/rewards/${id}`)
 }
 
+// ==================== Redemption Types ====================
+
+export interface RedemptionResponse {
+  id: number
+  code: string
+  pointsSpent: number
+  redeemedAt: string
+  usedAt?: string
+  reward: {
+    id: number
+    title: string
+    type: RewardType
+    partnerName?: string
+  }
+}
+
+// ==================== Redemption API Functions ====================
+
+/**
+ * Redeem a reward (volunteer only)
+ */
+export async function redeemReward(rewardId: number): Promise<RedemptionResponse> {
+  return api.post<RedemptionResponse>(`/redemptions/rewards/${rewardId}`, {})
+}
+
+/**
+ * Get all redemptions for the current user (volunteer only)
+ */
+export async function getMyRedemptions(): Promise<RedemptionResponse[]> {
+  return api.get<RedemptionResponse[]>('/redemptions/my')
+}
+
 // ==================== Utility Functions ====================
 
 /**

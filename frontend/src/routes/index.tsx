@@ -31,23 +31,11 @@ function HomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="primary" className="w-full">
-              Explore
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Track Your Impact</CardTitle>
-            <CardDescription>
-              See your contributions, earned points, and achievements
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="secondary" className="w-full">
-              View Dashboard
-            </Button>
+            <Link to="/opportunities">
+              <Button variant="primary" className="w-full">
+                Explore
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -57,9 +45,11 @@ function HomePage() {
             <CardDescription>Exchange your points for exclusive benefits and perks</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
-              Browse Rewards
-            </Button>
+            <Link to="/rewards">
+              <Button variant="outline" className="w-full">
+                Browse Rewards
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -73,9 +63,6 @@ function HomePage() {
                 Get Started
               </Button>
             </Link>
-            <Button variant="ghost" size="lg">
-              Learn More
-            </Button>
           </div>
         </section>
       )}
@@ -83,10 +70,11 @@ function HomePage() {
       {user && (
         <section className="mt-16 text-center">
           <h2 className="text-2xl font-semibold mb-4">Welcome back, {user.name}!</h2>
-          <p className="text-muted mb-6">You have 0 points. Start volunteering to earn more!</p>
-          <Button variant="primary" size="lg">
-            Find Opportunities
-          </Button>
+          <Link to="/opportunities">
+            <Button variant="primary" size="lg">
+              Find Opportunities
+            </Button>
+          </Link>
         </section>
       )}
     </div>

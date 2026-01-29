@@ -49,7 +49,6 @@ describe('HomePage', () => {
       render(<HomePage />)
 
       expect(screen.getByText('Discover Opportunities')).toBeInTheDocument()
-      expect(screen.getByText('Track Your Impact')).toBeInTheDocument()
       expect(screen.getByText('Redeem Rewards')).toBeInTheDocument()
     })
 
@@ -65,12 +64,6 @@ describe('HomePage', () => {
       const getStartedLink = screen.getByRole('link', { name: /get started/i })
       expect(getStartedLink).toBeInTheDocument()
       expect(getStartedLink).toHaveAttribute('href', '/register')
-    })
-
-    it('should show Learn More button for guests', () => {
-      render(<HomePage />)
-
-      expect(screen.getByRole('button', { name: /learn more/i })).toBeInTheDocument()
     })
 
     it('should not show welcome back message for guests', () => {
@@ -96,7 +89,6 @@ describe('HomePage', () => {
       render(<HomePage />)
 
       expect(screen.getByText('Discover Opportunities')).toBeInTheDocument()
-      expect(screen.getByText('Track Your Impact')).toBeInTheDocument()
       expect(screen.getByText('Redeem Rewards')).toBeInTheDocument()
     })
 
@@ -104,14 +96,6 @@ describe('HomePage', () => {
       render(<HomePage />)
 
       expect(screen.getByText('Welcome back, Test User!')).toBeInTheDocument()
-    })
-
-    it('should show points information', () => {
-      render(<HomePage />)
-
-      expect(
-        screen.getByText(/you have 0 points. start volunteering to earn more!/i),
-      ).toBeInTheDocument()
     })
 
     it('should show Find Opportunities button', () => {
@@ -136,12 +120,6 @@ describe('HomePage', () => {
       render(<HomePage />)
 
       expect(screen.getByRole('button', { name: /explore/i })).toBeInTheDocument()
-    })
-
-    it('should render View Dashboard button in Track Your Impact card', () => {
-      render(<HomePage />)
-
-      expect(screen.getByRole('button', { name: /view dashboard/i })).toBeInTheDocument()
     })
 
     it('should render Browse Rewards button in Redeem Rewards card', () => {

@@ -36,4 +36,24 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long>,
 
     @Query("SELECT COUNT(o) FROM Opportunity o WHERE o.status = :status")
     long countByStatus(@Param("status") OpportunityStatus status);
+
+    /**
+     * Find opportunities that should transition to IN_PROGRESS.
+     * These are OPEN or FULL opportunities where startDate has passed.
+     */
+    @Query("SELECT o FROM Opportunity o WHERE o.status IN :statuses AND o.startDate <= :now")
+    List<Opportunity> findOpportunitiesToStart(
+        @Param("statuses") List<OpportunityStatus> statuses,
+        @Param("now") LocalDateTime now
+    );
+
+    /**
+     * Find opportunities that should transition to COMPLETED.
+     * These are IN_PROGRESS opportunities where endDate has passed.
+     */
+    @Query("SELECT o FROM Opportunity o WHERE o.status = :status AND o.endDate <= :now")
+    List<Opportunity> findOpportunitiesToComplete(
+        @Param("status") OpportunityStatus status,
+        @Param("now") LocalDateTime now
+    );
 }

@@ -2,7 +2,9 @@
  * API client for the UA Volunteering Platform backend
  */
 
-const API_BASE_URL = '/api'
+// Use VITE_API_URL for direct API calls (production without nginx proxy)
+// Fall back to '/api' for local dev or when using nginx proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 export class ApiError extends Error {
   status: number
@@ -39,7 +41,12 @@ function buildUrl(
   endpoint: string,
   params?: Record<string, string | number | boolean | undefined>,
 ): string {
-  const url = new URL(`${API_BASE_URL}${endpoint}`, window.location.origin)
+  // Handle absolute URLs (e.g., https://backend.onrender.com) vs relative (/api)
+  const fullUrl = API_BASE_URL.startsWith('http')
+    ? `${API_BASE_URL}${endpoint}`
+    : `${window.location.origin}${API_BASE_URL}${endpoint}`
+
+  const url = new URL(fullUrl)
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

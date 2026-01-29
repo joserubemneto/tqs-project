@@ -504,6 +504,131 @@ describe('OpportunityDetailPage', () => {
       expect(screen.queryByTestId('edit-opportunity-button')).not.toBeInTheDocument()
     })
   })
+
+  describe('Publish button visibility', () => {
+    it('should show publish button for promoter owner with DRAFT status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('publish-opportunity-button')).toBeInTheDocument()
+      })
+    })
+
+    it('should show publish button for admin user with DRAFT status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 999,
+          email: 'admin@ua.pt',
+          name: 'Admin User',
+          role: 'ADMIN',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('publish-opportunity-button')).toBeInTheDocument()
+      })
+    })
+
+    it('should not show publish button for non-DRAFT status', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'OPEN' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('publish-opportunity-button')).not.toBeInTheDocument()
+    })
+
+    it('should not show publish button for non-owner volunteer', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 999,
+          email: 'volunteer@ua.pt',
+          name: 'Volunteer User',
+          role: 'VOLUNTEER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('publish-opportunity-button')).not.toBeInTheDocument()
+    })
+
+    it('should not show publish button for unauthenticated users', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('opportunity-title')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('publish-opportunity-button')).not.toBeInTheDocument()
+    })
+
+    it('should have Publish text on the button', async () => {
+      mockGetOpportunityById.mockResolvedValue({ ...mockOpportunity, status: 'DRAFT' })
+      mockUseAuth.mockReturnValue({
+        user: {
+          id: 1,
+          email: 'promoter@ua.pt',
+          name: 'Promoter User',
+          role: 'PROMOTER',
+          points: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+        isAuthenticated: true,
+      })
+
+      render(<OpportunityDetailPage />)
+
+      await waitFor(() => {
+        const publishButton = screen.getByTestId('publish-opportunity-button')
+        expect(publishButton).toHaveTextContent('Publish')
+      })
+    })
+  })
 })
 
 describe('ApplicationsManagement integration', () => {
