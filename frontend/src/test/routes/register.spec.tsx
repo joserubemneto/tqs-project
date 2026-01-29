@@ -72,5 +72,4 @@ describe('RegisterPage', () => {
     const mainDiv = container.firstChild as HTMLElement
     expect(mainDiv).toHaveClass('container', 'mx-auto', 'max-w-md', 'px-4', 'pb-8')
   })
-
 })
