@@ -22,6 +22,7 @@ export function ApplicationsManagement({
 }: ApplicationsManagementProps) {
   const queryClient = useQueryClient()
   const [processingId, setProcessingId] = useState<number | null>(null)
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
   const {
     data: applications = [],
@@ -37,10 +38,15 @@ export function ApplicationsManagement({
     mutationFn: approveApplication,
     onMutate: (applicationId) => {
       setProcessingId(applicationId)
+      setMutationError(null)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['opportunity-applications', opportunityId] })
-      queryClient.invalidateQueries({ queryKey: ['application-count', opportunityId] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['opportunity-applications', opportunityId] })
+      await queryClient.invalidateQueries({ queryKey: ['application-count', opportunityId] })
+    },
+    onError: (error) => {
+      console.error('Failed to approve application:', error)
+      setMutationError('Failed to approve application. Please try again.')
     },
     onSettled: () => {
       setProcessingId(null)
@@ -51,9 +57,14 @@ export function ApplicationsManagement({
     mutationFn: rejectApplication,
     onMutate: (applicationId) => {
       setProcessingId(applicationId)
+      setMutationError(null)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['opportunity-applications', opportunityId] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['opportunity-applications', opportunityId] })
+    },
+    onError: (error) => {
+      console.error('Failed to reject application:', error)
+      setMutationError('Failed to reject application. Please try again.')
     },
     onSettled: () => {
       setProcessingId(null)
@@ -140,6 +151,18 @@ export function ApplicationsManagement({
         </p>
       </CardHeader>
       <CardContent>
+        {mutationError && (
+          <div
+            className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive text-destructive text-sm"
+            role="alert"
+            data-testid="mutation-error"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              {mutationError}
+            </div>
+          </div>
+        )}
         {applications.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No applications yet</p>
         ) : (

@@ -330,46 +330,47 @@ test.describe('Volunteer Applications', () => {
       const opportunity = await response.json()
       const opportunityId = opportunity.id
 
-      // Login as volunteer and apply
+      // Step 1: First volunteer applies
       await loginAsVolunteer(page)
       await page.goto(`/opportunities/${opportunityId}`)
       await page.getByTestId('apply-button').click()
       await expect(page.getByTestId('application-status')).toBeVisible()
-
-      // Logout and login as promoter
-      await logout(page)
-      await loginAsPromoter(page)
-      await page.goto(`/opportunities/${opportunityId}`)
-
-      // Approve the first application
-      await page.getByTestId('approve-button').click()
-      await expect(page.getByTestId('application-status')).toHaveText('Approved')
-
-      // Logout and create a second volunteer application
       await logout(page)
 
-      // Register a new volunteer
+      // Step 2: Register and login as second volunteer, then apply
+      // (Both can apply while pending - spots are only consumed when approved)
       await page.goto('/register')
       await page.getByLabel(/name/i).fill('Second Volunteer')
       await page.getByLabel(/email/i).fill(`volunteer2-${Date.now()}@ua.pt`)
-      await page.locator('input[name="password"]').fill('password123')
-      await page.locator('input[name="confirmPassword"]').fill('password123')
+      await page.getByLabel(/password/i).fill('password123')
       await page.getByRole('button', { name: /create account/i }).click()
       await expect(page).toHaveURL('/')
 
-      // Apply to the same opportunity
+      // Second volunteer applies to the same opportunity
       await page.goto(`/opportunities/${opportunityId}`)
       await page.getByTestId('apply-button').click()
       await expect(page.getByTestId('application-status')).toBeVisible()
-
-      // Login as promoter again
       await logout(page)
+
+      // Step 3: Promoter approves the FIRST application (fills the only spot)
       await loginAsPromoter(page)
       await page.goto(`/opportunities/${opportunityId}`)
 
-      // The second application should have approve button disabled
-      const secondApproveButton = page.getByTestId('approve-button')
-      await expect(secondApproveButton).toBeDisabled()
+      // Should see 2 pending applications
+      await expect(page.getByText(/2 pending/i)).toBeVisible()
+
+      // Approve the first application (Sample Volunteer)
+      const approveButtons = page.getByTestId('approve-button')
+      await approveButtons.first().click()
+
+      // Wait for the first application to be approved
+      await expect(page.getByText('Approved')).toBeVisible()
+      await expect(page.getByText(/1 \/ 1 spots filled/i)).toBeVisible()
+
+      // Step 4: The remaining pending application should have disabled approve button
+      // (only one approve button should remain - for the second volunteer's pending application)
+      const remainingApproveButton = page.getByTestId('approve-button')
+      await expect(remainingApproveButton).toBeDisabled()
       await expect(page.getByText(/cannot approve: no spots remaining/i)).toBeVisible()
     })
   })
