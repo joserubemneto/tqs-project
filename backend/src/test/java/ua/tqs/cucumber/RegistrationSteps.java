@@ -26,13 +26,13 @@ public class RegistrationSteps {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    // Create ObjectMapper directly - doesn't need special Spring configuration
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MvcResult lastResult;
     private int lastStatusCode;
