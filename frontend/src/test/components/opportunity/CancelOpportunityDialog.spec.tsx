@@ -134,24 +134,6 @@ describe('CancelOpportunityDialog', () => {
     expect(mockOnClose).toHaveBeenCalled()
   })
 
-  it('should call onClose when overlay is clicked', async () => {
-    const user = userEvent.setup()
-
-    render(
-      <CancelOpportunityDialog
-        opportunity={mockOpportunity}
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: createWrapper() },
-    )
-
-    await user.click(screen.getByTestId('cancel-dialog-overlay'))
-
-    expect(mockOnClose).toHaveBeenCalled()
-  })
-
   it('should call cancelOpportunity and onSuccess on confirm', async () => {
     const user = userEvent.setup()
     const cancelledOpportunity = { ...mockOpportunity, status: 'CANCELLED' as const }

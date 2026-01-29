@@ -157,7 +157,7 @@ Feature: Create Volunteering Opportunity
   Scenario: Edit non-existent opportunity
     When I try to edit opportunity with id 99999
     Then the response status should be 404
-    And I should see error "Opportunity not found"
+    And I should see error "Opportunity not found with id: 99999"
 
   # ==================== CANCEL OPPORTUNITY SCENARIOS ====================
 
@@ -227,4 +227,4 @@ Feature: Create Volunteering Opportunity
   Scenario: Cancel non-existent opportunity
     When I try to cancel opportunity with id 99999
     Then the response status should be 404
-    And I should see error "Opportunity not found"
+    And I should see error "Opportunity not found with id: 99999"

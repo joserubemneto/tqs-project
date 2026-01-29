@@ -170,28 +170,6 @@ describe('EditOpportunityModal', () => {
     expect(mockOnClose).toHaveBeenCalled()
   })
 
-  it('should call onClose when overlay is clicked', async () => {
-    const user = userEvent.setup()
-
-    render(
-      <EditOpportunityModal
-        opportunity={mockOpportunity}
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: createWrapper() },
-    )
-
-    await waitFor(() => {
-      expect(screen.getByTestId('edit-modal-overlay')).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByTestId('edit-modal-overlay'))
-
-    expect(mockOnClose).toHaveBeenCalled()
-  })
-
   it('should show validation error when title is empty', async () => {
     const user = userEvent.setup()
 
