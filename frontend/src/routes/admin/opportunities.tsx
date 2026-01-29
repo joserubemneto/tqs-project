@@ -121,6 +121,7 @@ function OpportunitiesPage() {
   } | null>(null)
 
   // Reset page when filter changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally reset page when filter changes
   useEffect(() => {
     setPage(0)
   }, [statusFilter])
