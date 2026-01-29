@@ -320,10 +320,70 @@ class RewardControllerIT {
         }
 
         @Test
+        @DisplayName("should return rewards sorted ascending by pointsCost")
+        void shouldReturnRewardsSortedAscending() throws Exception {
+            // Create another reward with different points cost
+            Reward lowPointsReward = Reward.builder()
+                    .title("Low Points Reward")
+                    .description("A reward with low points")
+                    .pointsCost(10)
+                    .type(RewardType.MERCHANDISE)
+                    .active(true)
+                    .build();
+            rewardRepository.save(lowPointsReward);
+
+            mockMvc.perform(get("/api/admin/rewards")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "pointsCost")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].title").value("Low Points Reward"))
+                    .andExpect(jsonPath("$.content[1].title").value("Free Coffee"));
+        }
+
+        @Test
+        @DisplayName("should return rewards sorted descending by title")
+        void shouldReturnRewardsSortedDescending() throws Exception {
+            // Create another reward
+            Reward zReward = Reward.builder()
+                    .title("Zoo Ticket")
+                    .description("A zoo ticket reward")
+                    .pointsCost(200)
+                    .type(RewardType.PARTNER_VOUCHER)
+                    .active(true)
+                    .build();
+            rewardRepository.save(zReward);
+
+            mockMvc.perform(get("/api/admin/rewards")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "title")
+                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].title").value("Zoo Ticket"))
+                    .andExpect(jsonPath("$.content[1].title").value("Free Coffee"));
+        }
+
+        @Test
+        @DisplayName("should use default sorting when no params provided")
+        void shouldUseDefaultSorting() throws Exception {
+            mockMvc.perform(get("/api/admin/rewards")
+                    .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray());
+        }
+
+        @Test
         @DisplayName("should return 403 FORBIDDEN for non-admin")
         void shouldForbidNonAdmin() throws Exception {
             mockMvc.perform(get("/api/admin/rewards")
                     .header("Authorization", "Bearer " + volunteerToken))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("should return 403 FORBIDDEN without token")
+        void shouldRequireAuthForAdmin() throws Exception {
+            mockMvc.perform(get("/api/admin/rewards"))
                     .andExpect(status().isForbidden());
         }
     }
@@ -377,6 +437,33 @@ class RewardControllerIT {
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        @DisplayName("should return 403 FORBIDDEN for non-admin")
+        void shouldForbidNonAdmin() throws Exception {
+            UpdateRewardRequest request = UpdateRewardRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            mockMvc.perform(put("/api/admin/rewards/{id}", activeReward.getId())
+                    .header("Authorization", "Bearer " + volunteerToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("should return 403 FORBIDDEN without token")
+        void shouldRequireAuthForUpdate() throws Exception {
+            UpdateRewardRequest request = UpdateRewardRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            mockMvc.perform(put("/api/admin/rewards/{id}", activeReward.getId())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     @Nested
@@ -407,6 +494,13 @@ class RewardControllerIT {
         void shouldForbidNonAdmin() throws Exception {
             mockMvc.perform(delete("/api/admin/rewards/{id}", activeReward.getId())
                     .header("Authorization", "Bearer " + volunteerToken))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("should return 403 FORBIDDEN without token")
+        void shouldRequireAuthForDelete() throws Exception {
+            mockMvc.perform(delete("/api/admin/rewards/{id}", activeReward.getId()))
                     .andExpect(status().isForbidden());
         }
     }
