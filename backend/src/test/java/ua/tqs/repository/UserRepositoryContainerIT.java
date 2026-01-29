@@ -45,7 +45,7 @@ class UserRepositoryContainerIT extends PostgresTestContainerConfig {
         @DisplayName("should connect to PostgreSQL container successfully")
         void shouldConnectToPostgresContainer() {
             assertThat(postgres.isRunning()).isTrue();
-            assertThat(postgres.getDatabaseName()).isEqualTo("testdb");
+            assertThat(postgres.getDatabaseName()).isEqualTo("volunteering_test");
         }
 
         @Test

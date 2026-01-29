@@ -47,9 +47,16 @@ public abstract class PostgresTestContainerConfig {
     /**
      * Dynamically configure Spring datasource properties to use the Testcontainer.
      * This method is called by Spring before the application context is created.
+     * 
+     * IMPORTANT: These properties override any profile-specific settings (e.g., application-test.yml)
+     * to ensure PostgreSQL is used instead of H2 for container-based integration tests.
      */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // Ensure container is started before accessing its properties
+        postgres.start();
+        
+        // Datasource configuration for PostgreSQL
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
@@ -59,9 +66,12 @@ public abstract class PostgresTestContainerConfig {
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         
-        // Configure JPA for PostgreSQL
+        // Configure JPA for PostgreSQL - MUST override H2 dialect from application-test.yml
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.jpa.show-sql", () -> "true");
         registry.add("spring.jpa.properties.hibernate.format_sql", () -> "true");
+        // Override H2 dialect with PostgreSQL - this is critical!
+        // spring.jpa.database-platform is the Spring Boot standard way to set the Hibernate dialect
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
 }
