@@ -3,6 +3,9 @@ import { expect, test } from '@playwright/test'
 // Check if we're running in integration mode (with backend)
 const isIntegration = process.env.E2E_INTEGRATION === 'true'
 
+// Backend API URL for direct API calls (e.g., test reset)
+const API_URL = process.env.API_URL || 'http://localhost:8080'
+
 test.describe('Create Opportunity', () => {
   test.describe('Authentication and Authorization', () => {
     test('should redirect to login if not authenticated', async ({ page }) => {
@@ -723,6 +726,12 @@ test.describe('Create Opportunity', () => {
     })
 
     test.describe('Authorization', () => {
+      // Reset database before each test to ensure clean state
+      // This is important because other tests may modify user roles
+      test.beforeEach(async ({ request }) => {
+        await request.post(`${API_URL}/api/test/reset`)
+      })
+
       test('should not allow volunteers to access create page', async ({ page }) => {
         // Login as volunteer
         await page.goto('/login')

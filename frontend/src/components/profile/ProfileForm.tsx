@@ -8,6 +8,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SkillSelector,
   Textarea,
 } from '@/components/ui'
 import {
@@ -105,40 +106,6 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
     }
   }
 
-  const handleSkillToggle = (skillId: number) => {
-    setSelectedSkillIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(skillId)) {
-        newSet.delete(skillId)
-      } else {
-        newSet.add(skillId)
-      }
-      return newSet
-    })
-  }
-
-  // Group skills by category
-  const skillsByCategory = availableSkills.reduce(
-    (acc, skill) => {
-      if (!acc[skill.category]) {
-        acc[skill.category] = []
-      }
-      acc[skill.category].push(skill)
-      return acc
-    },
-    {} as Record<string, SkillResponse[]>,
-  )
-
-  const categoryLabels: Record<string, string> = {
-    TECHNICAL: 'Technical',
-    COMMUNICATION: 'Communication',
-    LEADERSHIP: 'Leadership',
-    CREATIVE: 'Creative',
-    ADMINISTRATIVE: 'Administrative',
-    SOCIAL: 'Social',
-    LANGUAGE: 'Language',
-    OTHER: 'Other',
-  }
 
   if (isLoadingProfile) {
     return (
@@ -212,42 +179,14 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <Label>Skills</Label>
-            <p className="text-sm text-muted">
-              Select the skills that describe your abilities and interests
-            </p>
-
-            {Object.entries(skillsByCategory).map(([category, skills]) => (
-              <div key={category} className="space-y-2">
-                <h4 className="text-sm font-medium text-foreground">
-                  {categoryLabels[category] || category}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {skills.map((skill) => (
-                    <button
-                      key={skill.id}
-                      type="button"
-                      onClick={() => handleSkillToggle(skill.id)}
-                      disabled={isLoading}
-                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                        selectedSkillIds.has(skill.id)
-                          ? 'bg-primary-500 text-white border-primary-500'
-                          : 'bg-surface border-border hover:border-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20'
-                      } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      title={skill.description}
-                    >
-                      {skill.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {availableSkills.length === 0 && (
-              <p className="text-sm text-muted italic">No skills available</p>
-            )}
-          </div>
+          <SkillSelector
+            skills={availableSkills}
+            selectedSkillIds={selectedSkillIds}
+            onSelectionChange={setSelectedSkillIds}
+            disabled={isLoading}
+            label="Skills"
+            description="Select the skills that describe your abilities and interests"
+          />
 
           <Button
             type="submit"

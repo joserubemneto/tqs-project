@@ -85,3 +85,37 @@ export async function parseProfileError(error: unknown): Promise<string> {
   }
   return 'An unexpected error occurred'
 }
+
+// ==================== Skill Utilities ====================
+
+/**
+ * Human-readable labels for skill categories
+ */
+export const SKILL_CATEGORY_LABELS: Record<SkillCategory, string> = {
+  TECHNICAL: 'Technical',
+  COMMUNICATION: 'Communication',
+  LEADERSHIP: 'Leadership',
+  CREATIVE: 'Creative',
+  ADMINISTRATIVE: 'Administrative',
+  SOCIAL: 'Social',
+  LANGUAGE: 'Language',
+  OTHER: 'Other',
+}
+
+/**
+ * Group skills by their category
+ */
+export function groupSkillsByCategory(
+  skills: SkillResponse[],
+): Record<SkillCategory, SkillResponse[]> {
+  return skills.reduce(
+    (acc, skill) => {
+      if (!acc[skill.category]) {
+        acc[skill.category] = []
+      }
+      acc[skill.category].push(skill)
+      return acc
+    },
+    {} as Record<SkillCategory, SkillResponse[]>,
+  )
+}
