@@ -13,7 +13,7 @@ test.describe('User Login', () => {
       await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible()
       await expect(page.getByLabel(/email/i)).toBeVisible()
       await expect(page.getByLabel(/password/i)).toBeVisible()
-      await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible()
+      await expect(page.locator('form').getByRole('button', { name: /sign in/i })).toBeVisible()
     })
 
     test('should have link to registration page', async ({ page }) => {
@@ -29,7 +29,10 @@ test.describe('User Login', () => {
   test.describe('Form Validation', () => {
     test('should show error for empty email', async ({ page }) => {
       await page.getByLabel(/password/i).fill('SecurePass123')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       await expect(page.getByText(/email is required/i)).toBeVisible()
     })
@@ -37,14 +40,20 @@ test.describe('User Login', () => {
     test('should show error for invalid email format', async ({ page }) => {
       await page.getByLabel(/email/i).fill('invalid-email')
       await page.getByLabel(/password/i).fill('SecurePass123')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       await expect(page.getByText(/invalid email format/i)).toBeVisible()
     })
 
     test('should show error for empty password', async ({ page }) => {
       await page.getByLabel(/email/i).fill('test@ua.pt')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       await expect(page.getByText(/password is required/i)).toBeVisible()
     })
@@ -75,7 +84,10 @@ test.describe('User Login', () => {
       // Login with the same credentials
       await page.getByLabel(/email/i).fill(uniqueEmail)
       await page.getByLabel(/password/i).fill('SecurePass123')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       // Should redirect to home page on success
       await expect(page).toHaveURL('/')
@@ -89,7 +101,10 @@ test.describe('User Login', () => {
     test('should show error for invalid credentials', async ({ page }) => {
       await page.getByLabel(/email/i).fill('nonexistent@ua.pt')
       await page.getByLabel(/password/i).fill('WrongPassword123')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       await expect(page.getByText(/invalid credentials/i)).toBeVisible()
     })
@@ -112,7 +127,10 @@ test.describe('User Login', () => {
 
       await page.getByLabel(/email/i).fill(uniqueEmail)
       await page.getByLabel(/password/i).fill('WrongPassword')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       await expect(page.getByText(/invalid credentials/i)).toBeVisible()
     })
@@ -141,7 +159,10 @@ test.describe('User Login', () => {
       await page.getByLabel(/password/i).fill('SecurePass123')
 
       // Click submit
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       // Button should show loading state
       await expect(page.getByRole('button', { name: /signing in/i })).toBeVisible()
@@ -180,7 +201,10 @@ test.describe('User Login', () => {
 
       await page.getByLabel(/email/i).fill('test@ua.pt')
       await page.getByLabel(/password/i).fill('wrongpassword')
-      await page.getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
 
       // Error should be visible in an alert
       const errorAlert = page.locator('[role="alert"]')
