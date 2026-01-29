@@ -135,6 +135,28 @@ describe('RootComponent', () => {
       expect(screen.getByText('Logout')).toBeInTheDocument()
     })
 
+    it('should show My Profile button', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    it('should have correct link for My Profile', () => {
+      render(<RootComponent />)
+
+      // There are two profile links: My Profile button and avatar
+      const profileLinks = screen.getAllByTestId('link-/profile')
+      expect(profileLinks.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('should have avatar linked to profile', () => {
+      render(<RootComponent />)
+
+      // Avatar should be wrapped in a link to /profile
+      const profileLinks = screen.getAllByTestId('link-/profile')
+      expect(profileLinks).toHaveLength(2) // My Profile button + Avatar
+    })
+
     it('should not show Admin Panel button for non-admin users', () => {
       render(<RootComponent />)
 
@@ -199,6 +221,20 @@ describe('RootComponent', () => {
       render(<RootComponent />)
 
       expect(screen.getByText('A')).toBeInTheDocument()
+    })
+
+    it('should show My Profile button for admin users', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    it('should have profile links for admin users', () => {
+      render(<RootComponent />)
+
+      // Admin should also have profile links (My Profile button + Avatar)
+      const profileLinks = screen.getAllByTestId('link-/profile')
+      expect(profileLinks).toHaveLength(2)
     })
   })
 

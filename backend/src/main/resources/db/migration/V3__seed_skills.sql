@@ -1,53 +1,9 @@
 -- =============================================================================
--- data-integration-test.sql
--- Seed data for E2E integration tests
--- This file runs when using the integration-test profile with ddl-auto: create
--- Default password for all seeded users: password
+-- V3__seed_skills.sql
+-- Seed skills for the platform
 -- =============================================================================
 
--- Insert admin user only if it doesn't exist
-INSERT INTO users (email, password, name, role, points, created_at, updated_at)
-SELECT 'admin@ua.pt', 
-       '$2a$10$w/RTKkG/tQ00sCIK4ST9pOBE4disgBStZmOe7eHqP.QPB.8udzWeG',
-       'System Administrator',
-       'ADMIN',
-       0,
-       CURRENT_TIMESTAMP,
-       CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'admin@ua.pt'
-);
-
--- Insert sample promoter
-INSERT INTO users (email, password, name, role, points, created_at, updated_at)
-SELECT 'promoter@ua.pt',
-       '$2a$10$w/RTKkG/tQ00sCIK4ST9pOBE4disgBStZmOe7eHqP.QPB.8udzWeG',
-       'Sample Promoter',
-       'PROMOTER',
-       0,
-       CURRENT_TIMESTAMP,
-       CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'promoter@ua.pt'
-);
-
--- Insert sample volunteer
-INSERT INTO users (email, password, name, role, points, bio, created_at, updated_at)
-SELECT 'volunteer@ua.pt',
-       '$2a$10$w/RTKkG/tQ00sCIK4ST9pOBE4disgBStZmOe7eHqP.QPB.8udzWeG',
-       'Sample Volunteer',
-       'VOLUNTEER',
-       50,
-       'I am passionate about helping others and making a difference in my community.',
-       CURRENT_TIMESTAMP,
-       CURRENT_TIMESTAMP
-WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'volunteer@ua.pt'
-);
-
--- =============================================================================
--- SEED SKILLS
--- =============================================================================
+-- Seed skills (idempotent - only inserts if not exists)
 INSERT INTO skills (name, category, description)
 SELECT 'Communication', 'COMMUNICATION', 'Effective verbal and written communication'
 WHERE NOT EXISTS (SELECT 1 FROM skills WHERE name = 'Communication');
@@ -81,7 +37,7 @@ SELECT 'Portuguese', 'LANGUAGE', 'Portuguese language proficiency'
 WHERE NOT EXISTS (SELECT 1 FROM skills WHERE name = 'Portuguese');
 
 -- =============================================================================
--- ASSOCIATE SKILLS WITH VOLUNTEER USER
+-- ASSOCIATE SKILLS WITH VOLUNTEER USER (if exists and not already associated)
 -- =============================================================================
 INSERT INTO user_skills (user_id, skill_id)
 SELECT u.id, s.id
