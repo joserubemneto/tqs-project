@@ -4,5 +4,6 @@ export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export { Input, type InputProps, inputVariants } from './input'
 export { Label, type LabelProps } from './label'
 export { Select, type SelectProps, selectVariants } from './select'
+export { SkillSelector } from './skill-selector'
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
 export { Textarea, type TextareaProps, textareaVariants } from './textarea'

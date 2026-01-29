@@ -310,6 +310,9 @@
                                 <!-- Exclude simple exception classes (no logic, just constructors) -->
                                 <exclude>ua/tqs/exception/EmailAlreadyExistsException.class</exclude>
                                 <exclude>ua/tqs/exception/ErrorResponse.class</exclude>
+                                <!-- Exclude test utilities (only available in integration-test profile) -->
+                                <exclude>ua/tqs/controller/TestResetController.class</exclude>
+                                <exclude>ua/tqs/service/TestResetService.class</exclude>
                             </excludes>
                         </configuration>
                     </execution>

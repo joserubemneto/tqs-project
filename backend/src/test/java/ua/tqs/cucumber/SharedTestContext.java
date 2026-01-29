@@ -2,6 +2,7 @@ package ua.tqs.cucumber;
 
 import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MvcResult;
+import ua.tqs.model.Skill;
 
 /**
  * Shared test context for Cucumber step definitions.
@@ -13,11 +14,45 @@ public class SharedTestContext {
     private MvcResult lastResult;
     private int lastStatusCode;
     private String lastResponseBody;
+    private Skill communicationSkill;
+    private Skill leadershipSkill;
+    private String authToken;
 
     public void reset() {
         lastResult = null;
         lastStatusCode = 0;
         lastResponseBody = null;
+        communicationSkill = null;
+        leadershipSkill = null;
+        authToken = null;
+    }
+
+    public String getAuthToken() {
+        return authToken;
+    }
+
+    public void setAuthToken(String authToken) {
+        this.authToken = authToken;
+    }
+
+    public void clearAuthToken() {
+        this.authToken = null;
+    }
+
+    public Skill getCommunicationSkill() {
+        return communicationSkill;
+    }
+
+    public void setCommunicationSkill(Skill communicationSkill) {
+        this.communicationSkill = communicationSkill;
+    }
+
+    public Skill getLeadershipSkill() {
+        return leadershipSkill;
+    }
+
+    public void setLeadershipSkill(Skill leadershipSkill) {
+        this.leadershipSkill = leadershipSkill;
     }
 
     public MvcResult getLastResult() {

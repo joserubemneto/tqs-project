@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -215,6 +216,70 @@ class GlobalExceptionHandlerTest {
 
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleOpportunityValidation()")
+    class HandleOpportunityValidation {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            OpportunityValidationException exception = new OpportunityValidationException("End date must be after start date");
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityValidation(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("End date must be after start date");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "At least one skill is required";
+            OpportunityValidationException exception = new OpportunityValidationException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityValidation(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleAccessDenied()")
+    class HandleAccessDenied {
+
+        @Test
+        @DisplayName("should return FORBIDDEN status with error message")
+        void shouldReturnForbiddenStatus() {
+            AccessDeniedException exception = new AccessDeniedException("Access is denied");
+
+            ResponseEntity<ErrorResponse> response = handler.handleAccessDenied(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(403);
+            assertThat(response.getBody().getError()).isEqualTo("Forbidden");
+            assertThat(response.getBody().getMessage()).isEqualTo("Access denied");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should return generic access denied message regardless of exception message")
+        void shouldReturnGenericAccessDeniedMessage() {
+            AccessDeniedException exception = new AccessDeniedException("User does not have PROMOTER role");
+
+            ResponseEntity<ErrorResponse> response = handler.handleAccessDenied(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            // Should return generic message, not expose internal role details
+            assertThat(response.getBody().getMessage()).isEqualTo("Access denied");
         }
     }
 
