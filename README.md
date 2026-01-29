@@ -91,11 +91,10 @@ tqs-project/
 2. Add `SONAR_TOKEN` to GitHub repository secrets
 3. Update badge URLs in this README with your username
 
+## Sonar Cloud link
+https://sonarcloud.io/summary/new_code?id=joserubemneto_tqs-project
+
 ## API Documentation
 
 When running locally, Swagger UI is available at:
 - http://localhost:8080/swagger-ui.html
-
-## License
-
-This project is developed for TQS (Testing and Software Quality) course at Universidade de Aveiro.
