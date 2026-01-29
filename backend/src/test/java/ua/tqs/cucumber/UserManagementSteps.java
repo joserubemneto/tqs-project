@@ -255,5 +255,7 @@ public class UserManagementSteps {
         JsonNode json = objectMapper.readTree(responseBody);
         authToken = json.get("token").asText();
         currentUserId = json.get("id").asLong();
+        // Store token in shared context for cross-step-class access
+        context.setAuthToken(authToken);
     }
 }

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Input, Label, Select, Textarea } from '@/components/ui'
+import { getActivePartners, type PartnerResponse } from '@/lib/partner'
 import type {
   CreateRewardRequest,
   RewardResponse,
@@ -28,6 +29,7 @@ export function RewardForm({ initialData, onSubmit, onCancel, isSubmitting }: Re
     description: initialData?.description || '',
     pointsCost: initialData?.pointsCost?.toString() || '',
     type: initialData?.type || ('OTHER' as RewardType),
+    partnerId: initialData?.partner?.id?.toString() || '',
     quantity: initialData?.quantity?.toString() || '',
     availableFrom: initialData?.availableFrom ? initialData.availableFrom.slice(0, 16) : '',
     availableUntil: initialData?.availableUntil ? initialData.availableUntil.slice(0, 16) : '',
@@ -35,6 +37,19 @@ export function RewardForm({ initialData, onSubmit, onCancel, isSubmitting }: Re
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [partners, setPartners] = useState<PartnerResponse[]>([])
+  const [loadingPartners, setLoadingPartners] = useState(false)
+
+  // Fetch partners when type is PARTNER_VOUCHER
+  useEffect(() => {
+    if (formData.type === 'PARTNER_VOUCHER' && partners.length === 0) {
+      setLoadingPartners(true)
+      getActivePartners()
+        .then((data) => setPartners(data))
+        .catch((err) => console.error('Failed to load partners:', err))
+        .finally(() => setLoadingPartners(false))
+    }
+  }, [formData.type, partners.length])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -79,6 +94,7 @@ export function RewardForm({ initialData, onSubmit, onCancel, isSubmitting }: Re
       description: formData.description,
       pointsCost: parseInt(formData.pointsCost, 10),
       type: formData.type,
+      partnerId: formData.partnerId ? parseInt(formData.partnerId, 10) : undefined,
       quantity: formData.quantity ? parseInt(formData.quantity, 10) : undefined,
       availableFrom: formData.availableFrom || undefined,
       availableUntil: formData.availableUntil || undefined,
@@ -139,12 +155,37 @@ export function RewardForm({ initialData, onSubmit, onCancel, isSubmitting }: Re
             id="type"
             value={formData.type}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, type: e.target.value as RewardType }))
+              setFormData((prev) => ({
+                ...prev,
+                type: e.target.value as RewardType,
+                partnerId: e.target.value !== 'PARTNER_VOUCHER' ? '' : prev.partnerId,
+              }))
             }
             options={REWARD_TYPES}
           />
         </div>
       </div>
+
+      {formData.type === 'PARTNER_VOUCHER' && (
+        <div className="space-y-2">
+          <Label htmlFor="partnerId">Partner</Label>
+          {loadingPartners ? (
+            <div className="text-sm text-muted-foreground">Loading partners...</div>
+          ) : partners.length === 0 ? (
+            <div className="text-sm text-muted-foreground">No active partners available</div>
+          ) : (
+            <Select
+              id="partnerId"
+              value={formData.partnerId}
+              onChange={(e) => setFormData((prev) => ({ ...prev, partnerId: e.target.value }))}
+              options={[
+                { value: '', label: 'Select a partner (optional)' },
+                ...partners.map((p) => ({ value: p.id.toString(), label: p.name })),
+              ]}
+            />
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="quantity">Quantity (leave empty for unlimited)</Label>

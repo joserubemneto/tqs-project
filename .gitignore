@@ -26,3 +26,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+
+# k6 load test results
+k6/results/*.json
+k6/results/*.csv

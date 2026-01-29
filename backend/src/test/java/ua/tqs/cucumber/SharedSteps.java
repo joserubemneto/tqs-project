@@ -3,6 +3,7 @@ package ua.tqs.cucumber;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -54,5 +55,10 @@ public class SharedSteps {
     public void theResponseShouldShowRole(String expectedRole) throws Exception {
         JsonNode json = objectMapper.readTree(context.getLastResponseBody());
         assertThat(json.get("role").asText()).isEqualTo(expectedRole);
+    }
+
+    @Given("I am not authenticated")
+    public void iAmNotAuthenticated() {
+        context.clearAuthToken();
     }
 }

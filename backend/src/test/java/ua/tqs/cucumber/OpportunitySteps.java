@@ -145,11 +145,6 @@ public class OpportunitySteps {
         context.setAuthToken(jwtService.generateToken(currentUser));
     }
 
-    @Given("I am not authenticated")
-    public void iAmNotAuthenticated() {
-        context.clearAuthToken();
-    }
-
     @Given("I have created an opportunity with title {string}")
     public void iHaveCreatedAnOpportunityWithTitle(String opportunityTitle) throws Exception {
         this.title = opportunityTitle;
