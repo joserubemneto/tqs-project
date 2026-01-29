@@ -255,6 +255,49 @@ public class OpportunityService {
     }
 
     /**
+     * Publish an opportunity (change status from DRAFT to OPEN).
+     * Only opportunities in DRAFT status can be published.
+     * Only the promoter who created it or an admin can publish.
+     */
+    @Transactional
+    public OpportunityResponse publishOpportunity(Long userId, Long opportunityId, boolean isAdmin) {
+        Opportunity opportunity = opportunityRepository.findById(opportunityId)
+                .orElseThrow(() -> new OpportunityNotFoundException(opportunityId));
+
+        // Validate ownership
+        validateOwnership(opportunity, userId, isAdmin);
+
+        // Validate status is DRAFT
+        if (opportunity.getStatus() != OpportunityStatus.DRAFT) {
+            throw new OpportunityStatusException("Only DRAFT opportunities can be published");
+        }
+
+        opportunity.setStatus(OpportunityStatus.OPEN);
+
+        Opportunity savedOpportunity = opportunityRepository.save(opportunity);
+        log.info("Published opportunity '{}' (id: {}) by user {}", 
+                savedOpportunity.getTitle(), savedOpportunity.getId(), userId);
+
+        return OpportunityResponse.fromOpportunity(savedOpportunity);
+    }
+
+    /**
+     * Get all opportunities for admin view with optional status filter.
+     */
+    @Transactional(readOnly = true)
+    public Page<OpportunityResponse> getAllOpportunitiesForAdmin(Pageable pageable, OpportunityStatus status) {
+        Page<Opportunity> opportunities;
+        if (status != null) {
+            opportunities = opportunityRepository.findByStatus(status, pageable);
+            log.debug("Retrieved {} opportunities with status {} for admin", opportunities.getTotalElements(), status);
+        } else {
+            opportunities = opportunityRepository.findAll(pageable);
+            log.debug("Retrieved {} total opportunities for admin", opportunities.getTotalElements());
+        }
+        return opportunities.map(OpportunityResponse::fromOpportunity);
+    }
+
+    /**
      * Validate that the user owns the opportunity or is an admin.
      */
     private void validateOwnership(Opportunity opportunity, Long userId, boolean isAdmin) {

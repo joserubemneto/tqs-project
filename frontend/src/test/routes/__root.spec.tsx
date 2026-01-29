@@ -113,6 +113,7 @@ describe('RootComponent', () => {
       email: 'volunteer@ua.pt',
       name: 'Test Volunteer',
       role: 'VOLUNTEER' as const,
+      points: 150,
     }
 
     beforeEach(() => {
@@ -186,6 +187,55 @@ describe('RootComponent', () => {
       render(<RootComponent />)
 
       expect(screen.getByTestId('link-/my-applications')).toBeInTheDocument()
+    })
+
+    it('should show Rewards button with points for volunteers', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Rewards')).toBeInTheDocument()
+      expect(screen.getByText('150 pts')).toBeInTheDocument()
+    })
+
+    it('should have correct link for Rewards', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByTestId('link-/rewards')).toBeInTheDocument()
+    })
+
+    it('should show My Redemptions button for volunteers', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('My Redemptions')).toBeInTheDocument()
+    })
+
+    it('should have correct link for My Redemptions', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByTestId('link-/rewards/my-redemptions')).toBeInTheDocument()
+    })
+
+    it('should show 0 pts when user has no points', () => {
+      mockUseAuth.mockReturnValue({
+        user: { ...volunteerUser, points: 0 },
+        isLoading: false,
+        logout: mockLogout,
+      })
+
+      render(<RootComponent />)
+
+      expect(screen.getByText('0 pts')).toBeInTheDocument()
+    })
+
+    it('should show 0 pts when points is undefined', () => {
+      mockUseAuth.mockReturnValue({
+        user: { ...volunteerUser, points: undefined },
+        isLoading: false,
+        logout: mockLogout,
+      })
+
+      render(<RootComponent />)
+
+      expect(screen.getByText('0 pts')).toBeInTheDocument()
     })
 
     it('should not show Sign In or Get Started buttons', () => {

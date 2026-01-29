@@ -169,4 +169,25 @@ public class OpportunityController {
                 currentUser.getUserId(), id, isAdmin);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/{id}/publish")
+    @PreAuthorize("hasRole('PROMOTER') or hasRole('ADMIN')")
+    @Operation(summary = "Publish an opportunity", description = "Publish a DRAFT opportunity to make it visible (owner or ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully published opportunity"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Opportunity is not in DRAFT status"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User does not own the opportunity"),
+            @ApiResponse(responseCode = "404", description = "Opportunity not found")
+    })
+    public ResponseEntity<OpportunityResponse> publishOpportunity(
+            @Parameter(description = "Opportunity ID")
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+        OpportunityResponse response = opportunityService.publishOpportunity(
+                currentUser.getUserId(), id, isAdmin);
+        return ResponseEntity.ok(response);
+    }
 }

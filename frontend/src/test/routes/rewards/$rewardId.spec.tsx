@@ -5,14 +5,28 @@ import type { RewardResponse } from '@/lib/reward'
 
 // Mock the reward API
 const mockGetReward = vi.fn()
+const mockRedeemReward = vi.fn()
 
 vi.mock('@/lib/reward', async () => {
   const actual = await vi.importActual('@/lib/reward')
   return {
     ...actual,
     getReward: (id: number) => mockGetReward(id),
+    redeemReward: (id: number) => mockRedeemReward(id),
   }
 })
+
+// Mock useAuth hook
+const mockRefreshPoints = vi.fn()
+let mockUser: { id: number; email: string; name: string; role: string; points?: number } | null =
+  null
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: mockUser,
+    refreshPoints: mockRefreshPoints,
+  }),
+}))
 
 // Variable to control which rewardId is returned
 let mockRewardId = '1'
@@ -97,6 +111,8 @@ describe('Reward Detail Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetReward.mockResolvedValue(mockReward)
+    mockUser = null // Reset to unauthenticated by default
+    mockRefreshPoints.mockResolvedValue(undefined)
   })
 
   describe('Loading State', () => {
@@ -788,6 +804,343 @@ describe('Reward Detail Page', () => {
 
       // The component should not render the main content
       expect(screen.queryByTestId('reward-title')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Volunteer with enough points', () => {
+    beforeEach(() => {
+      mockUser = {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Test Volunteer',
+        role: 'VOLUNTEER',
+        points: 100,
+      }
+    })
+
+    it('should show Redeem Reward button enabled for volunteer with enough points', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        const redeemButton = screen.getByRole('button', { name: /Redeem Reward/ })
+        expect(redeemButton).toBeInTheDocument()
+        expect(redeemButton).not.toBeDisabled()
+      })
+    })
+
+    it('should show user points balance', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText(/Your balance:/)).toBeInTheDocument()
+        expect(screen.getByText('100 points')).toBeInTheDocument()
+      })
+    })
+
+    it('should call redeemReward when Redeem button is clicked', async () => {
+      mockRedeemReward.mockResolvedValue({
+        id: 1,
+        code: 'ABC123XYZ',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: { id: 1, title: 'Free Coffee', type: 'PARTNER_VOUCHER' },
+      })
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(mockRedeemReward).toHaveBeenCalledWith(1)
+      })
+    })
+
+    it('should show redemption code after successful redemption', async () => {
+      mockRedeemReward.mockResolvedValue({
+        id: 1,
+        code: 'ABC123XYZ',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: { id: 1, title: 'Free Coffee', type: 'PARTNER_VOUCHER' },
+      })
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Reward Redeemed!')).toBeInTheDocument()
+        expect(screen.getByText('ABC123XYZ')).toBeInTheDocument()
+      })
+    })
+
+    it('should show "View All My Redemptions" link after successful redemption', async () => {
+      mockRedeemReward.mockResolvedValue({
+        id: 1,
+        code: 'ABC123XYZ',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: { id: 1, title: 'Free Coffee', type: 'PARTNER_VOUCHER' },
+      })
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        const redemptionsLink = screen.getByRole('link', { name: /View All My Redemptions/ })
+        expect(redemptionsLink).toBeInTheDocument()
+        expect(redemptionsLink).toHaveAttribute('href', '/rewards/my-redemptions')
+      })
+    })
+
+    it('should call refreshPoints after successful redemption', async () => {
+      mockRedeemReward.mockResolvedValue({
+        id: 1,
+        code: 'ABC123XYZ',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: { id: 1, title: 'Free Coffee', type: 'PARTNER_VOUCHER' },
+      })
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(mockRefreshPoints).toHaveBeenCalled()
+      })
+    })
+
+    it('should hide Redeem button after successful redemption', async () => {
+      mockRedeemReward.mockResolvedValue({
+        id: 1,
+        code: 'ABC123XYZ',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: { id: 1, title: 'Free Coffee', type: 'PARTNER_VOUCHER' },
+      })
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Reward Redeemed!')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByRole('button', { name: /Redeem Reward/ })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Volunteer with insufficient points', () => {
+    beforeEach(() => {
+      mockUser = {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Test Volunteer',
+        role: 'VOLUNTEER',
+        points: 30, // Less than reward cost of 50
+      }
+    })
+
+    it('should show "Not Enough Points" button when volunteer lacks points', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Not Enough Points/ })).toBeInTheDocument()
+      })
+    })
+
+    it('should disable the button when volunteer lacks points', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /Not Enough Points/ })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it('should show how many more points are needed', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText(/You need 20 more points/)).toBeInTheDocument()
+      })
+    })
+
+    it('should show current balance when user has insufficient points', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('30 points')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Non-volunteer logged-in user', () => {
+    beforeEach(() => {
+      mockUser = {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Test Promoter',
+        role: 'PROMOTER',
+        points: 0,
+      }
+    })
+
+    it('should show disabled Redeem button for non-volunteer', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /Redeem Reward/ })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it('should show "Only volunteers can redeem rewards" message', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Only volunteers can redeem rewards')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Unauthenticated user', () => {
+    beforeEach(() => {
+      mockUser = null
+    })
+
+    it('should show disabled Redeem button for unauthenticated user', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /Redeem Reward/ })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it('should show "Sign in as a volunteer to redeem" message', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('Sign in as a volunteer to redeem')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Redemption error handling', () => {
+    beforeEach(() => {
+      mockUser = {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Test Volunteer',
+        role: 'VOLUNTEER',
+        points: 100,
+      }
+    })
+
+    it('should show error message when redemption fails', async () => {
+      mockRedeemReward.mockRejectedValue(new Error('Insufficient points'))
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Redemption Failed')).toBeInTheDocument()
+        expect(screen.getByText('Insufficient points')).toBeInTheDocument()
+      })
+    })
+
+    it('should show parsed error message from JSON response', async () => {
+      mockRedeemReward.mockRejectedValue(
+        new Error(JSON.stringify({ message: 'Reward is out of stock' })),
+      )
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Reward is out of stock')).toBeInTheDocument()
+      })
+    })
+
+    it('should still show Redeem button after redemption error', async () => {
+      mockRedeemReward.mockRejectedValue(new Error('Network error'))
+
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /Redeem Reward/ }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Redemption Failed')).toBeInTheDocument()
+      })
+
+      // Redeem button should still be available for retry
+      expect(screen.getByRole('button', { name: /Redeem Reward/ })).toBeInTheDocument()
+    })
+  })
+
+  describe('Volunteer with zero points', () => {
+    beforeEach(() => {
+      mockUser = {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Test Volunteer',
+        role: 'VOLUNTEER',
+        points: 0,
+      }
+    })
+
+    it('should show 0 points balance', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText('0 points')).toBeInTheDocument()
+      })
+    })
+
+    it('should show how many points are needed when user has 0 points', async () => {
+      renderActualPage()
+
+      await waitFor(() => {
+        expect(screen.getByText(/You need 50 more points/)).toBeInTheDocument()
+      })
     })
   })
 })

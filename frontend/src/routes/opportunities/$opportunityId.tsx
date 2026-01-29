@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   Loader2,
   MapPin,
   RefreshCw,
+  Send,
   Star,
   Trash2,
   User,
@@ -34,7 +35,7 @@ import {
   getApprovedApplicationCount,
   getMyApplicationForOpportunity,
 } from '@/lib/application'
-import { getOpportunityById, type OpportunityResponse } from '@/lib/opportunity'
+import { getOpportunityById, type OpportunityResponse, publishOpportunity } from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/$opportunityId')({
   component: OpportunityDetailPage,
@@ -109,6 +110,17 @@ function OpportunityDetailPage() {
     // Invalidate the count to refresh it
     queryClient.invalidateQueries({ queryKey: ['application-count', id] })
   }
+
+  // Publish mutation
+  const publishMutation = useMutation({
+    mutationFn: () => publishOpportunity(id),
+    onSuccess: (publishedOpportunity) => {
+      queryClient.setQueryData(['opportunity', id], publishedOpportunity)
+    },
+  })
+
+  // Check if opportunity can be published (DRAFT status)
+  const canPublish = canManage && opportunity?.status === 'DRAFT'
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -229,9 +241,24 @@ function OpportunityDetailPage() {
           Back to opportunities
         </Link>
 
-        {/* Edit/Cancel Actions */}
+        {/* Edit/Publish/Cancel Actions */}
         {canManage && (
           <div className="flex gap-2">
+            {canPublish && (
+              <Button
+                variant="primary"
+                onClick={() => publishMutation.mutate()}
+                disabled={publishMutation.isPending}
+                data-testid="publish-opportunity-button"
+              >
+                {publishMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Publish
+              </Button>
+            )}
             {canEdit && (
               <Button
                 variant="outline"

@@ -7,6 +7,7 @@ import {
   getUsers,
   isAdmin,
   isAuthenticated,
+  isVolunteer,
   login,
   parseAuthError,
   register,
@@ -387,6 +388,46 @@ describe('auth', () => {
       localStorage.setItem('auth_token', 'invalid')
 
       expect(isAdmin()).toBe(false)
+    })
+  })
+
+  describe('isVolunteer', () => {
+    it('should return true when user role is VOLUNTEER', () => {
+      const token = createMockJwt({ id: 1, email: 'volunteer@ua.pt', role: 'VOLUNTEER' })
+      localStorage.setItem('auth_token', token)
+
+      expect(isVolunteer()).toBe(true)
+    })
+
+    it('should return false when user role is ADMIN', () => {
+      const token = createMockJwt({ id: 1, email: 'admin@ua.pt', role: 'ADMIN' })
+      localStorage.setItem('auth_token', token)
+
+      expect(isVolunteer()).toBe(false)
+    })
+
+    it('should return false when user role is PROMOTER', () => {
+      const token = createMockJwt({ id: 1, email: 'promoter@ua.pt', role: 'PROMOTER' })
+      localStorage.setItem('auth_token', token)
+
+      expect(isVolunteer()).toBe(false)
+    })
+
+    it('should return false when user role is PARTNER', () => {
+      const token = createMockJwt({ id: 1, email: 'partner@ua.pt', role: 'PARTNER' })
+      localStorage.setItem('auth_token', token)
+
+      expect(isVolunteer()).toBe(false)
+    })
+
+    it('should return false when no token exists', () => {
+      expect(isVolunteer()).toBe(false)
+    })
+
+    it('should return false for invalid token', () => {
+      localStorage.setItem('auth_token', 'invalid')
+
+      expect(isVolunteer()).toBe(false)
     })
   })
 

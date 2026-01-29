@@ -1188,4 +1188,309 @@ class OpportunityServiceTest {
                     .hasMessage("Opportunity is already cancelled");
         }
     }
+
+    @Nested
+    @DisplayName("publishOpportunity()")
+    class PublishOpportunityMethod {
+
+        @Test
+        @DisplayName("should publish opportunity in DRAFT status")
+        void shouldPublishOpportunityInDraftStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.DRAFT);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.publishOpportunity(1L, 1L, false);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity not found")
+        void shouldThrowExceptionWhenOpportunityNotFound() {
+            // Arrange
+            when(opportunityRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 999L, false))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner")
+        void shouldThrowExceptionWhenUserIsNotOwner() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.DRAFT);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(999L, 1L, false))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Access denied");
+        }
+
+        @Test
+        @DisplayName("should allow admin to publish any opportunity")
+        void shouldAllowAdminToPublishAnyOpportunity() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.DRAFT);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.publishOpportunity(999L, 1L, true);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is OPEN")
+        void shouldThrowExceptionWhenOpportunityIsOpen() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.OPEN);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Only DRAFT opportunities can be published");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is IN_PROGRESS")
+        void shouldThrowExceptionWhenOpportunityIsInProgress() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.IN_PROGRESS);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Only DRAFT opportunities can be published");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is COMPLETED")
+        void shouldThrowExceptionWhenOpportunityIsCompleted() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.COMPLETED);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Only DRAFT opportunities can be published");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is CANCELLED")
+        void shouldThrowExceptionWhenOpportunityIsCancelled() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.CANCELLED);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Only DRAFT opportunities can be published");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is FULL")
+        void shouldThrowExceptionWhenOpportunityIsFull() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.FULL);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.publishOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Only DRAFT opportunities can be published");
+        }
+
+        @Test
+        @DisplayName("should save opportunity with OPEN status")
+        void shouldSaveOpportunityWithOpenStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.DRAFT);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            opportunityService.publishOpportunity(1L, 1L, false);
+
+            // Assert
+            verify(opportunityRepository).save(argThat(opp -> 
+                opp.getStatus() == OpportunityStatus.OPEN
+            ));
+        }
+    }
+
+    @Nested
+    @DisplayName("getAllOpportunitiesForAdmin()")
+    class GetAllOpportunitiesForAdminMethod {
+
+        private Opportunity openOpportunity;
+
+        @BeforeEach
+        void setUpOpenOpportunity() {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            openOpportunity = Opportunity.builder()
+                    .id(2L)
+                    .title("Open Opportunity")
+                    .description("An open opportunity for volunteers")
+                    .pointsReward(30)
+                    .startDate(LocalDateTime.now().plusDays(5))
+                    .endDate(LocalDateTime.now().plusDays(10))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoter)
+                    .requiredSkills(skills)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return all opportunities when status is null")
+        void shouldReturnAllOpportunitiesWhenStatusIsNull() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(savedOpportunity, openOpportunity), pageable, 2);
+            when(opportunityRepository.findAll(pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, null);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(2);
+            verify(opportunityRepository).findAll(pageable);
+            verify(opportunityRepository, never()).findByStatus(any(), any());
+        }
+
+        @Test
+        @DisplayName("should filter by status when status is provided")
+        void shouldFilterByStatusWhenStatusIsProvided() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, OpportunityStatus.OPEN);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getStatus()).isEqualTo(OpportunityStatus.OPEN);
+            verify(opportunityRepository).findByStatus(OpportunityStatus.OPEN, pageable);
+            verify(opportunityRepository, never()).findAll(pageable);
+        }
+
+        @Test
+        @DisplayName("should return empty page when no opportunities match status")
+        void shouldReturnEmptyPageWhenNoOpportunitiesMatchStatus() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            when(opportunityRepository.findByStatus(OpportunityStatus.CANCELLED, pageable)).thenReturn(emptyPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, OpportunityStatus.CANCELLED);
+
+            // Assert
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+        }
+
+        @Test
+        @DisplayName("should respect pagination parameters")
+        void shouldRespectPaginationParameters() {
+            // Arrange
+            Pageable pageable = PageRequest.of(2, 5);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 11);
+            when(opportunityRepository.findAll(pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, null);
+
+            // Assert
+            assertThat(result.getNumber()).isEqualTo(2);
+            assertThat(result.getSize()).isEqualTo(5);
+            assertThat(result.getTotalElements()).isEqualTo(11);
+        }
+
+        @Test
+        @DisplayName("should map Opportunity to OpportunityResponse correctly")
+        void shouldMapOpportunityToResponseCorrectly() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            when(opportunityRepository.findAll(pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, null);
+
+            // Assert
+            OpportunityResponse response = result.getContent().get(0);
+            assertThat(response.getId()).isEqualTo(2L);
+            assertThat(response.getTitle()).isEqualTo("Open Opportunity");
+            assertThat(response.getDescription()).isEqualTo("An open opportunity for volunteers");
+            assertThat(response.getPointsReward()).isEqualTo(30);
+            assertThat(response.getMaxVolunteers()).isEqualTo(5);
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("should filter by DRAFT status")
+        void shouldFilterByDraftStatus() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(savedOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.DRAFT, pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, OpportunityStatus.DRAFT);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getStatus()).isEqualTo(OpportunityStatus.DRAFT);
+        }
+
+        @Test
+        @DisplayName("should filter by IN_PROGRESS status")
+        void shouldFilterByInProgressStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.IN_PROGRESS);
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(savedOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.IN_PROGRESS, pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, OpportunityStatus.IN_PROGRESS);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should filter by COMPLETED status")
+        void shouldFilterByCompletedStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.COMPLETED);
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(savedOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.COMPLETED, pageable)).thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpportunitiesForAdmin(pageable, OpportunityStatus.COMPLETED);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+        }
+    }
 }

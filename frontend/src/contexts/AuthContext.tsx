@@ -1,11 +1,13 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react'
 import { clearAuthToken, getAuthToken, type UserRole } from '@/lib/auth'
+import { getProfile } from '@/lib/profile'
 
 interface User {
   id: number
   email: string
   name: string
   role: UserRole
+  points?: number
 }
 
 interface AuthContextType {
@@ -13,6 +15,7 @@ interface AuthContextType {
   isLoading: boolean
   setUser: (user: User | null) => void
   logout: () => void
+  refreshPoints: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -48,14 +51,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Restore user from token on mount
-    const token = getAuthToken()
-    if (token) {
-      const decoded = decodeToken(token)
-      setUser(decoded)
+  const refreshPoints = useCallback(async () => {
+    if (!user) return
+    try {
+      const profile = await getProfile()
+      setUser((prev) => (prev ? { ...prev, points: profile.points } : null))
+    } catch {
+      // Silently fail - points will update on next page load
     }
-    setIsLoading(false)
+  }, [user])
+
+  useEffect(() => {
+    // Restore user from token on mount and fetch points
+    const initAuth = async () => {
+      const token = getAuthToken()
+      if (token) {
+        const decoded = decodeToken(token)
+        if (decoded) {
+          setUser(decoded)
+          // Fetch current points from profile
+          try {
+            const profile = await getProfile()
+            setUser((prev) => (prev ? { ...prev, points: profile.points } : null))
+          } catch {
+            // Continue without points if profile fetch fails
+          }
+        }
+      }
+      setIsLoading(false)
+    }
+    initAuth()
   }, [])
 
   const logout = () => {
@@ -64,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, setUser, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, setUser, logout, refreshPoints }}>
       {children}
     </AuthContext.Provider>
   )

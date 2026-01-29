@@ -11,6 +11,13 @@ vi.mock('@/lib/auth', () => ({
   clearAuthToken: () => mockClearAuthToken(),
 }))
 
+// Mock the profile module
+const mockGetProfile = vi.fn()
+
+vi.mock('@/lib/profile', () => ({
+  getProfile: () => mockGetProfile(),
+}))
+
 // Import after mocks
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
@@ -24,12 +31,13 @@ function createJWT(payload: object): string {
 
 // Test component that uses the auth context
 function TestConsumer() {
-  const { user, isLoading, setUser, logout } = useAuth()
+  const { user, isLoading, setUser, logout, refreshPoints } = useAuth()
 
   return (
     <div>
       <div data-testid="loading">{isLoading ? 'loading' : 'not-loading'}</div>
       <div data-testid="user">{user ? JSON.stringify(user) : 'no-user'}</div>
+      <div data-testid="points">{user?.points ?? 'no-points'}</div>
       <button
         type="button"
         onClick={() => setUser({ id: 99, email: 'new@ua.pt', name: 'New User', role: 'VOLUNTEER' })}
@@ -40,6 +48,9 @@ function TestConsumer() {
       <button type="button" onClick={logout} data-testid="logout">
         Logout
       </button>
+      <button type="button" onClick={refreshPoints} data-testid="refresh-points">
+        Refresh Points
+      </button>
     </div>
   )
 }
@@ -48,6 +59,7 @@ describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetAuthToken.mockReturnValue(null)
+    mockGetProfile.mockRejectedValue(new Error('Not authenticated'))
   })
 
   describe('useAuth hook', () => {
@@ -414,6 +426,122 @@ describe('AuthContext', () => {
       })
 
       expect(screen.getByTestId('user')).toHaveTextContent('no-user')
+    })
+  })
+
+  describe('refreshPoints', () => {
+    it('should update user points when refreshPoints is called', async () => {
+      const validToken = createJWT({
+        id: 1,
+        email: 'user@ua.pt',
+        name: 'Test User',
+        role: 'VOLUNTEER',
+      })
+      mockGetAuthToken.mockReturnValue(validToken)
+      mockGetProfile.mockResolvedValue({ points: 150 })
+
+      const user = userEvent.setup()
+
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('not-loading')
+      })
+
+      // Click refresh points
+      await user.click(screen.getByTestId('refresh-points'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('points')).toHaveTextContent('150')
+      })
+    })
+
+    it('should not crash when refreshPoints is called with no user', async () => {
+      mockGetAuthToken.mockReturnValue(null)
+
+      const user = userEvent.setup()
+
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('not-loading')
+      })
+
+      // Click refresh points - should not crash
+      await user.click(screen.getByTestId('refresh-points'))
+
+      // User should still be null
+      expect(screen.getByTestId('user')).toHaveTextContent('no-user')
+      expect(mockGetProfile).not.toHaveBeenCalled()
+    })
+
+    it('should silently fail when profile fetch fails during refreshPoints', async () => {
+      const validToken = createJWT({
+        id: 1,
+        email: 'user@ua.pt',
+        name: 'Test User',
+        role: 'VOLUNTEER',
+      })
+      mockGetAuthToken.mockReturnValue(validToken)
+      // First call for initial load succeeds
+      mockGetProfile.mockResolvedValueOnce({ points: 100 })
+      // Second call for refresh fails
+      mockGetProfile.mockRejectedValueOnce(new Error('Network error'))
+
+      const user = userEvent.setup()
+
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('points')).toHaveTextContent('100')
+      })
+
+      // Click refresh points - should not crash despite error
+      await user.click(screen.getByTestId('refresh-points'))
+
+      // Points should remain unchanged
+      await waitFor(() => {
+        expect(screen.getByTestId('points')).toHaveTextContent('100')
+      })
+    })
+
+    it('should fetch points on initial load when token is present', async () => {
+      const validToken = createJWT({
+        id: 1,
+        email: 'user@ua.pt',
+        name: 'Test User',
+        role: 'VOLUNTEER',
+      })
+      mockGetAuthToken.mockReturnValue(validToken)
+      mockGetProfile.mockResolvedValue({ points: 250 })
+
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('loading')).toHaveTextContent('not-loading')
+      })
+
+      await waitFor(() => {
+        expect(screen.getByTestId('points')).toHaveTextContent('250')
+      })
+
+      expect(mockGetProfile).toHaveBeenCalled()
     })
   })
 })

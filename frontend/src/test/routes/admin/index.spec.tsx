@@ -123,6 +123,23 @@ describe('AdminDashboard', () => {
       expect(viewRewardsLink).toHaveAttribute('href', '/admin/rewards')
     })
 
+    it('should render Manage Opportunities card', () => {
+      render(<AdminDashboard />)
+
+      expect(screen.getByText('Manage Opportunities')).toBeInTheDocument()
+      expect(
+        screen.getByText(/view and manage all volunteering opportunities/i),
+      ).toBeInTheDocument()
+    })
+
+    it('should render View Opportunities button with link to /admin/opportunities', () => {
+      render(<AdminDashboard />)
+
+      const viewOpportunitiesLink = screen.getByRole('link', { name: /view opportunities/i })
+      expect(viewOpportunitiesLink).toBeInTheDocument()
+      expect(viewOpportunitiesLink).toHaveAttribute('href', '/admin/opportunities')
+    })
+
     it('should render Reports card', () => {
       render(<AdminDashboard />)
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -6,11 +6,13 @@ import {
   Award,
   Building2,
   Calendar,
+  CheckCircle,
   ExternalLink,
   Loader2,
   Package,
   RefreshCw,
 } from 'lucide-react'
+import { useState } from 'react'
 import {
   Badge,
   Button,
@@ -20,12 +22,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   getAvailabilityText,
   getReward,
   getRewardTypeColor,
   getRewardTypeLabel,
   isRewardAvailable,
+  type RedemptionResponse,
+  redeemReward,
 } from '@/lib/reward'
 
 export const Route = createFileRoute('/rewards/$rewardId')({
@@ -35,6 +40,9 @@ export const Route = createFileRoute('/rewards/$rewardId')({
 function RewardDetailPage() {
   const { rewardId } = Route.useParams()
   const id = parseInt(rewardId, 10)
+  const { user, refreshPoints } = useAuth()
+  const [redemptionResult, setRedemptionResult] = useState<RedemptionResponse | null>(null)
+  const [redemptionError, setRedemptionError] = useState<string | null>(null)
 
   const {
     data: reward,
@@ -47,6 +55,30 @@ function RewardDetailPage() {
     queryFn: () => getReward(id),
     enabled: !Number.isNaN(id),
   })
+
+  const redeemMutation = useMutation({
+    mutationFn: () => redeemReward(id),
+    onSuccess: async (result) => {
+      setRedemptionResult(result)
+      setRedemptionError(null)
+      // Refresh user points
+      await refreshPoints()
+      // Refetch reward to update remaining quantity
+      refetch()
+    },
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : 'Failed to redeem reward'
+      try {
+        const parsed = JSON.parse(message)
+        setRedemptionError(parsed.message || message)
+      } catch {
+        setRedemptionError(message)
+      }
+    },
+  })
+
+  const isVolunteer = user?.role === 'VOLUNTEER'
+  const hasEnoughPoints = user?.points !== undefined && reward && user.points >= reward.pointsCost
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null
@@ -290,13 +322,84 @@ function RewardDetailPage() {
             </Card>
           )}
 
-          {/* Redeem Button (placeholder - can be expanded for actual redemption) */}
-          {available && (
-            <Button className="w-full" size="lg" disabled>
-              <Award className="h-4 w-4 mr-2" />
-              Redeem Reward
-            </Button>
+          {/* Redemption Success */}
+          {redemptionResult && (
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-3">
+                  <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
+                  <div>
+                    <p className="font-semibold text-green-800">Reward Redeemed!</p>
+                    <p className="text-sm text-green-700 mt-1">Your redemption code:</p>
+                    <p className="text-2xl font-mono font-bold text-green-900 mt-2">
+                      {redemptionResult.code}
+                    </p>
+                  </div>
+                  <p className="text-xs text-green-600">Save this code to claim your reward</p>
+                  <Link to="/rewards/my-redemptions">
+                    <Button variant="outline" size="sm" className="mt-2">
+                      View All My Redemptions
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           )}
+
+          {/* Redemption Error */}
+          {redemptionError && (
+            <div className="p-4 rounded-md bg-red-50 border border-red-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-red-800 font-medium">Redemption Failed</p>
+                  <p className="text-sm text-red-700 mt-1">{redemptionError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Redeem Button */}
+          {available && !redemptionResult && isVolunteer && (
+            <div className="space-y-3">
+              <div className="text-center text-sm text-muted-foreground">
+                Your balance:{' '}
+                <span className="font-semibold text-yellow-600">{user?.points ?? 0} points</span>
+              </div>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => redeemMutation.mutate()}
+                disabled={redeemMutation.isPending || !hasEnoughPoints}
+              >
+                {redeemMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Award className="h-4 w-4 mr-2" />
+                )}
+                {hasEnoughPoints ? 'Redeem Reward' : 'Not Enough Points'}
+              </Button>
+              {!hasEnoughPoints && (
+                <p className="text-center text-xs text-muted-foreground">
+                  You need {reward.pointsCost - (user?.points ?? 0)} more points
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Not logged in or not volunteer */}
+          {available && !redemptionResult && !isVolunteer && (
+            <div className="space-y-3">
+              <Button className="w-full" size="lg" disabled>
+                <Award className="h-4 w-4 mr-2" />
+                Redeem Reward
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                {user ? 'Only volunteers can redeem rewards' : 'Sign in as a volunteer to redeem'}
+              </p>
+            </div>
+          )}
+
           {!available && (
             <p className="text-center text-sm text-muted-foreground">
               This reward is currently not available for redemption.

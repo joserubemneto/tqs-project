@@ -94,6 +94,14 @@ export interface GetOpportunitiesParams extends OpportunityFilters {
   sortDir?: string
 }
 
+export interface AdminOpportunitiesParams {
+  page?: number
+  size?: number
+  status?: OpportunityStatus
+  sortBy?: string
+  sortDir?: string
+}
+
 // ==================== API Functions ====================
 
 /**
@@ -166,6 +174,32 @@ export async function updateOpportunity(
  */
 export async function cancelOpportunity(id: number): Promise<OpportunityResponse> {
   return api.post<OpportunityResponse>(`/opportunities/${id}/cancel`, {})
+}
+
+/**
+ * Publish a DRAFT opportunity to make it visible (owner or admin only)
+ */
+export async function publishOpportunity(id: number): Promise<OpportunityResponse> {
+  return api.post<OpportunityResponse>(`/opportunities/${id}/publish`, {})
+}
+
+/**
+ * Get all opportunities for admin view with optional status filter (admin only)
+ */
+export async function getAdminOpportunities(
+  params?: AdminOpportunitiesParams,
+): Promise<OpportunityPageResponse> {
+  const queryParams: Record<string, string | number | undefined> = {
+    page: params?.page,
+    size: params?.size,
+    status: params?.status,
+    sortBy: params?.sortBy,
+    sortDir: params?.sortDir,
+  }
+
+  return api.get<OpportunityPageResponse>('/admin/opportunities', {
+    params: queryParams,
+  })
 }
 
 /**

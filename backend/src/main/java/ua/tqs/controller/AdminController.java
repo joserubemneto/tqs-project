@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,11 +16,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ua.tqs.config.JwtUserDetails;
+import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.dto.UpdateRoleRequest;
 import ua.tqs.dto.UserPageResponse;
 import ua.tqs.dto.UserResponse;
+import ua.tqs.model.enums.OpportunityStatus;
 import ua.tqs.model.enums.UserRole;
 import ua.tqs.service.AdminService;
+import ua.tqs.service.OpportunityService;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -29,6 +33,7 @@ import ua.tqs.service.AdminService;
 public class AdminController {
 
     private final AdminService adminService;
+    private final OpportunityService opportunityService;
 
     @GetMapping("/users")
     @Operation(summary = "Get all users", description = "Get a paginated list of all users with optional search and role filter")
@@ -76,6 +81,34 @@ public class AdminController {
             @AuthenticationPrincipal JwtUserDetails currentUser
     ) {
         UserResponse response = adminService.updateUserRole(id, request.getRole(), currentUser.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/opportunities")
+    @Operation(summary = "Get all opportunities", description = "Get a paginated list of all opportunities with optional status filter (admin only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved opportunities"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User is not an admin")
+    })
+    public ResponseEntity<Page<OpportunityResponse>> getOpportunities(
+            @Parameter(description = "Page number (0-indexed)")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size")
+            @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Filter by status")
+            @RequestParam(required = false) OpportunityStatus status,
+            @Parameter(description = "Sort field (e.g., 'createdAt', 'title', 'startDate')")
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction ('asc' or 'desc')")
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<OpportunityResponse> response = opportunityService.getAllOpportunitiesForAdmin(pageable, status);
         return ResponseEntity.ok(response);
     }
 }

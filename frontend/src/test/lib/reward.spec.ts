@@ -5,12 +5,14 @@ import {
   deleteReward,
   getAvailabilityText,
   getAvailableRewards,
+  getMyRedemptions,
   getReward,
   getRewards,
   getRewardTypeColor,
   getRewardTypeLabel,
   isRewardAvailable,
   type RewardResponse,
+  redeemReward,
   updateReward,
 } from '@/lib/reward'
 
@@ -339,6 +341,127 @@ describe('reward API functions', () => {
       await deleteReward(99)
 
       expect(api.delete).toHaveBeenCalledWith('/admin/rewards/99')
+    })
+  })
+
+  describe('redeemReward', () => {
+    const mockRedemptionResponse = {
+      id: 1,
+      code: 'ABC123XYZ',
+      pointsSpent: 50,
+      redeemedAt: '2024-01-15T10:00:00Z',
+      reward: {
+        id: 1,
+        title: 'Free Coffee',
+        type: 'PARTNER_VOUCHER' as const,
+        partnerName: 'UA Cafeteria',
+      },
+    }
+
+    it('should call api.post with correct path', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockRedemptionResponse)
+
+      const result = await redeemReward(1)
+
+      expect(api.post).toHaveBeenCalledWith('/redemptions/rewards/1', {})
+      expect(result).toEqual(mockRedemptionResponse)
+    })
+
+    it('should return redemption response with code', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockRedemptionResponse)
+
+      const result = await redeemReward(1)
+
+      expect(result.code).toBe('ABC123XYZ')
+      expect(result.pointsSpent).toBe(50)
+      expect(result.reward.title).toBe('Free Coffee')
+    })
+
+    it('should handle different reward IDs', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockRedemptionResponse)
+
+      await redeemReward(42)
+
+      expect(api.post).toHaveBeenCalledWith('/redemptions/rewards/42', {})
+    })
+
+    it('should propagate error when user has insufficient points', async () => {
+      const error = new Error('Insufficient points')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(redeemReward(1)).rejects.toThrow('Insufficient points')
+    })
+
+    it('should propagate error when reward is not available', async () => {
+      const error = new Error('Reward not available')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(redeemReward(1)).rejects.toThrow('Reward not available')
+    })
+  })
+
+  describe('getMyRedemptions', () => {
+    const mockRedemptions = [
+      {
+        id: 1,
+        code: 'ABC123',
+        pointsSpent: 50,
+        redeemedAt: '2024-01-15T10:00:00Z',
+        reward: {
+          id: 1,
+          title: 'Free Coffee',
+          type: 'PARTNER_VOUCHER' as const,
+          partnerName: 'UA Cafeteria',
+        },
+      },
+      {
+        id: 2,
+        code: 'DEF456',
+        pointsSpent: 100,
+        redeemedAt: '2024-01-16T14:00:00Z',
+        usedAt: '2024-01-17T09:00:00Z',
+        reward: {
+          id: 2,
+          title: 'Library Pass',
+          type: 'UA_SERVICE' as const,
+        },
+      },
+    ]
+
+    it('should call api.get with correct path', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockRedemptions)
+
+      const result = await getMyRedemptions()
+
+      expect(api.get).toHaveBeenCalledWith('/redemptions/my')
+      expect(result).toEqual(mockRedemptions)
+    })
+
+    it('should return array of redemptions', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockRedemptions)
+
+      const result = await getMyRedemptions()
+
+      expect(result).toHaveLength(2)
+      expect(result[0].code).toBe('ABC123')
+      expect(result[1].code).toBe('DEF456')
+    })
+
+    it('should return empty array when no redemptions', async () => {
+      vi.mocked(api.get).mockResolvedValue([])
+
+      const result = await getMyRedemptions()
+
+      expect(result).toEqual([])
+    })
+
+    it('should include usedAt when redemption has been used', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockRedemptions)
+
+      const result = await getMyRedemptions()
+
+      expect(result[0].usedAt).toBeUndefined()
+      expect(result[1].usedAt).toBe('2024-01-17T09:00:00Z')
     })
   })
 })
