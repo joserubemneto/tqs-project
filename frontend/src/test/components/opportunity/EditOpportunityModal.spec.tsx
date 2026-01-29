@@ -18,12 +18,17 @@ vi.mock('@/lib/opportunity', async () => {
 // Mock the profile API for skills
 vi.mock('@/lib/profile', () => ({
   getSkills: vi.fn().mockResolvedValue([
-    { id: 1, name: 'Communication', category: 'COMMUNICATION', description: 'Communication skills' },
+    {
+      id: 1,
+      name: 'Communication',
+      category: 'COMMUNICATION',
+      description: 'Communication skills',
+    },
     { id: 2, name: 'Leadership', category: 'LEADERSHIP', description: 'Leadership skills' },
   ]),
 }))
 
-import { updateOpportunity, parseOpportunityError } from '@/lib/opportunity'
+import { parseOpportunityError, updateOpportunity } from '@/lib/opportunity'
 
 const mockOpportunity: OpportunityResponse = {
   id: 1,
@@ -43,7 +48,14 @@ const mockOpportunity: OpportunityResponse = {
     points: 0,
     createdAt: '2024-01-01T00:00:00Z',
   },
-  requiredSkills: [{ id: 1, name: 'Communication', category: 'COMMUNICATION', description: 'Communication skills' }],
+  requiredSkills: [
+    {
+      id: 1,
+      name: 'Communication',
+      category: 'COMMUNICATION',
+      description: 'Communication skills',
+    },
+  ],
   createdAt: '2024-01-15T00:00:00Z',
 }
 
@@ -233,9 +245,12 @@ describe('EditOpportunityModal', () => {
     await user.click(screen.getByTestId('save-edit-button'))
 
     await waitFor(() => {
-      expect(updateOpportunity).toHaveBeenCalledWith(1, expect.objectContaining({
-        title: 'Updated Title',
-      }))
+      expect(updateOpportunity).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          title: 'Updated Title',
+        }),
+      )
       expect(mockOnSuccess).toHaveBeenCalledWith(updatedOpportunity)
       expect(mockOnClose).toHaveBeenCalled()
     })
@@ -264,7 +279,9 @@ describe('EditOpportunityModal', () => {
     await user.click(screen.getByTestId('save-edit-button'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent('Cannot edit opportunity in current status')
+      expect(screen.getByTestId('error-message')).toHaveTextContent(
+        'Cannot edit opportunity in current status',
+      )
     })
   })
 })

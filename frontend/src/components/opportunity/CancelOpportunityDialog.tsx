@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import { useState } from 'react'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import {
   cancelOpportunity,
@@ -46,13 +46,9 @@ export function CancelOpportunityDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
       data-testid="cancel-dialog-overlay"
     >
-      <div
-        className="w-full max-w-md mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-md mx-4">
         <Card>
           <CardHeader className="relative">
             <Button
@@ -75,7 +71,8 @@ export function CancelOpportunityDialog({
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
               Are you sure you want to cancel{' '}
-              <span className="font-semibold text-foreground">&quot;{opportunity.title}&quot;</span>?
+              <span className="font-semibold text-foreground">&quot;{opportunity.title}&quot;</span>
+              ?
             </p>
             <p className="text-sm text-muted-foreground">
               This action cannot be undone. All enrolled volunteers will be notified that the

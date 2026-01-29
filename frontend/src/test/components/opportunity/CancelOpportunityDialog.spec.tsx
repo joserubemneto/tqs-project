@@ -194,7 +194,9 @@ describe('CancelOpportunityDialog', () => {
     await user.click(screen.getByTestId('confirm-cancel-button'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent('Cannot cancel opportunity in progress')
+      expect(screen.getByTestId('error-message')).toHaveTextContent(
+        'Cannot cancel opportunity in progress',
+      )
     })
 
     // Should not close on error

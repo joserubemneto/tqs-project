@@ -1,5 +1,5 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import {
   Button,
   Card,
@@ -15,8 +15,8 @@ import {
 import {
   type OpportunityResponse,
   parseOpportunityError,
-  updateOpportunity,
   type UpdateOpportunityData,
+  updateOpportunity,
 } from '@/lib/opportunity'
 import { getSkills, type SkillResponse } from '@/lib/profile'
 
@@ -216,13 +216,9 @@ export function EditOpportunityModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
       data-testid="edit-modal-overlay"
     >
-      <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
         <Card>
           <CardHeader className="relative">
             <Button
@@ -287,7 +283,9 @@ export function EditOpportunityModal({
                   />
                   <div className="flex justify-between text-xs text-muted">
                     <span>
-                      {errors.description && <span className="text-error">{errors.description}</span>}
+                      {errors.description && (
+                        <span className="text-error">{errors.description}</span>
+                      )}
                     </span>
                     <span className={description.length > 2000 ? 'text-error' : ''}>
                       {description.length}/2000
@@ -338,7 +336,12 @@ export function EditOpportunityModal({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField id="edit-startDate" label="Start Date" required error={errors.startDate}>
+                  <FormField
+                    id="edit-startDate"
+                    label="Start Date"
+                    required
+                    error={errors.startDate}
+                  >
                     <Input
                       id="edit-startDate"
                       name="startDate"
