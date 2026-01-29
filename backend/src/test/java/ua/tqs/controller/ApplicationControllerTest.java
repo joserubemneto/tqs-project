@@ -18,6 +18,7 @@ import ua.tqs.exception.ApplicationNotFoundException;
 import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityNotEndedException;
 import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
@@ -746,6 +747,133 @@ class ApplicationControllerTest {
 
             // Act & Assert
             assertThatThrownBy(() -> applicationController.rejectApplication(1L, promoterUser))
+                    .isInstanceOf(OpportunityOwnershipException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/applications/{applicationId}/complete")
+    class CompleteApplicationEndpoint {
+
+        private JwtUserDetails promoterUser;
+        private ApplicationResponse completedApplicationResponse;
+
+        @BeforeEach
+        void setUp() {
+            promoterUser = new JwtUserDetails(2L, "promoter@ua.pt", "PROMOTER");
+            
+            ApplicationResponse.OpportunitySummary opportunitySummary = ApplicationResponse.OpportunitySummary.builder()
+                    .id(1L)
+                    .title("UA Open Day Support")
+                    .status("COMPLETED")
+                    .startDate(LocalDateTime.now().minusDays(7))
+                    .endDate(LocalDateTime.now().minusDays(1))
+                    .pointsReward(50)
+                    .location("University Campus")
+                    .build();
+
+            completedApplicationResponse = ApplicationResponse.builder()
+                    .id(1L)
+                    .status(ApplicationStatus.COMPLETED)
+                    .message("I would love to help!")
+                    .appliedAt(LocalDateTime.now().minusDays(10))
+                    .reviewedAt(LocalDateTime.now().minusDays(8))
+                    .completedAt(LocalDateTime.now())
+                    .opportunity(opportunitySummary)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful completion")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenReturn(completedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.completeApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return completed ApplicationResponse")
+        void shouldReturnCompletedApplicationResponse() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenReturn(completedApplicationResponse);
+
+            // Act
+            ResponseEntity<ApplicationResponse> response = 
+                    applicationController.completeApplication(1L, promoterUser);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(ApplicationStatus.COMPLETED);
+            assertThat(response.getBody().getCompletedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should delegate to ApplicationService.completeApplication()")
+        void shouldDelegateToApplicationService() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenReturn(completedApplicationResponse);
+
+            // Act
+            applicationController.completeApplication(1L, promoterUser);
+
+            // Assert
+            verify(applicationService).completeApplication(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("should propagate ApplicationNotFoundException from service")
+        void shouldPropagateApplicationNotFoundException() {
+            // Arrange
+            when(applicationService.completeApplication(999L, 2L))
+                    .thenThrow(new ApplicationNotFoundException(999L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.completeApplication(999L, promoterUser))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate InvalidApplicationStatusException from service")
+        void shouldPropagateInvalidApplicationStatusException() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenThrow(new InvalidApplicationStatusException("Cannot complete application with status: PENDING"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.completeApplication(1L, promoterUser))
+                    .isInstanceOf(InvalidApplicationStatusException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityNotEndedException from service")
+        void shouldPropagateOpportunityNotEndedException() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenThrow(new OpportunityNotEndedException());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.completeApplication(1L, promoterUser))
+                    .isInstanceOf(OpportunityNotEndedException.class);
+        }
+
+        @Test
+        @DisplayName("should propagate OpportunityOwnershipException from service")
+        void shouldPropagateOpportunityOwnershipException() {
+            // Arrange
+            when(applicationService.completeApplication(1L, 2L))
+                    .thenThrow(new OpportunityOwnershipException("Only the opportunity promoter or admin can complete applications"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationController.completeApplication(1L, promoterUser))
                     .isInstanceOf(OpportunityOwnershipException.class);
         }
     }

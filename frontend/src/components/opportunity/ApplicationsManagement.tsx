@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Check, Clock, Loader2, User, X } from 'lucide-react'
+import { AlertCircle, Check, CheckCircle2, Clock, Loader2, Star, User, X } from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import {
   type ApplicationResponse,
   approveApplication,
+  completeApplication,
   getApplicationStatusColor,
   getApplicationStatusLabel,
   getApplicationsForOpportunity,
@@ -14,11 +15,15 @@ import {
 interface ApplicationsManagementProps {
   opportunityId: number
   maxVolunteers: number
+  endDate: string
+  pointsReward: number
 }
 
 export function ApplicationsManagement({
   opportunityId,
   maxVolunteers,
+  endDate,
+  pointsReward,
 }: ApplicationsManagementProps) {
   const queryClient = useQueryClient()
   const [processingId, setProcessingId] = useState<number | null>(null)
@@ -71,6 +76,25 @@ export function ApplicationsManagement({
     },
   })
 
+  const completeMutation = useMutation({
+    mutationFn: completeApplication,
+    onMutate: (applicationId) => {
+      setProcessingId(applicationId)
+      setMutationError(null)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['opportunity-applications', opportunityId] })
+      await queryClient.invalidateQueries({ queryKey: ['application-count', opportunityId] })
+    },
+    onError: (error) => {
+      console.error('Failed to complete application:', error)
+      setMutationError('Failed to mark participation as completed. Please try again.')
+    },
+    onSettled: () => {
+      setProcessingId(null)
+    },
+  })
+
   const handleApprove = (applicationId: number) => {
     approveMutation.mutate(applicationId)
   }
@@ -78,6 +102,13 @@ export function ApplicationsManagement({
   const handleReject = (applicationId: number) => {
     rejectMutation.mutate(applicationId)
   }
+
+  const handleComplete = (applicationId: number) => {
+    completeMutation.mutate(applicationId)
+  }
+
+  // Check if the opportunity has ended
+  const hasOpportunityEnded = new Date(endDate) < new Date()
 
   const approvedCount = applications.filter((app) => app.status === 'APPROVED').length
   const pendingCount = applications.filter((app) => app.status === 'PENDING').length
@@ -173,8 +204,11 @@ export function ApplicationsManagement({
                 application={application}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onComplete={handleComplete}
                 isProcessing={processingId === application.id}
                 spotsRemaining={spotsRemaining}
+                hasOpportunityEnded={hasOpportunityEnded}
+                pointsReward={pointsReward}
                 formatDate={formatDate}
               />
             ))}
@@ -189,8 +223,11 @@ interface ApplicationCardProps {
   application: ApplicationResponse
   onApprove: (id: number) => void
   onReject: (id: number) => void
+  onComplete: (id: number) => void
   isProcessing: boolean
   spotsRemaining: number
+  hasOpportunityEnded: boolean
+  pointsReward: number
   formatDate: (dateString: string) => string
 }
 
@@ -198,12 +235,18 @@ function ApplicationCard({
   application,
   onApprove,
   onReject,
+  onComplete,
   isProcessing,
   spotsRemaining,
+  hasOpportunityEnded,
+  pointsReward,
   formatDate,
 }: ApplicationCardProps) {
   const isPending = application.status === 'PENDING'
+  const isApproved = application.status === 'APPROVED'
+  const isCompleted = application.status === 'COMPLETED'
   const canApprove = isPending && spotsRemaining > 0
+  const canComplete = isApproved && hasOpportunityEnded
 
   return (
     <div
@@ -241,7 +284,7 @@ function ApplicationCard({
       )}
 
       {/* Timestamps */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           Applied: {formatDate(application.appliedAt)}
@@ -252,7 +295,21 @@ function ApplicationCard({
             Reviewed: {formatDate(application.reviewedAt)}
           </div>
         )}
+        {application.completedAt && (
+          <div className="flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            Completed: {formatDate(application.completedAt)}
+          </div>
+        )}
       </div>
+
+      {/* Points awarded indicator for completed applications */}
+      {isCompleted && pointsReward > 0 && (
+        <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded-md p-2">
+          <Star className="h-4 w-4" />
+          <span data-testid="points-awarded">+{pointsReward} points awarded</span>
+        </div>
+      )}
 
       {/* Action buttons for pending applications */}
       {isPending && (
@@ -290,6 +347,35 @@ function ApplicationCard({
               </>
             )}
           </Button>
+        </div>
+      )}
+
+      {/* Action button for approved applications - Mark Complete */}
+      {isApproved && (
+        <div className="flex flex-col gap-2 pt-2 border-t">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onComplete(application.id)}
+            disabled={isProcessing || !canComplete}
+            data-testid="complete-button"
+            className="w-full"
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Mark Complete
+                {pointsReward > 0 && ` (+${pointsReward} pts)`}
+              </>
+            )}
+          </Button>
+          {!hasOpportunityEnded && (
+            <p className="text-xs text-muted-foreground" data-testid="complete-disabled-message">
+              Participation can only be marked as completed after the opportunity ends
+            </p>
+          )}
         </div>
       )}
 

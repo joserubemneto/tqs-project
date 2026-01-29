@@ -11,6 +11,7 @@ import ua.tqs.exception.ApplicationNotFoundException;
 import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityNotEndedException;
 import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
@@ -239,6 +240,62 @@ public class ApplicationService {
 
         Application savedApplication = applicationRepository.save(application);
         log.info("Application {} rejected by user {} for opportunity '{}'",
+                applicationId, userId, opportunity.getTitle());
+
+        return ApplicationResponse.fromApplication(savedApplication);
+    }
+
+    /**
+     * Mark an approved application as completed.
+     * Validates that the requesting user is the opportunity owner or an admin,
+     * that the application is in APPROVED status, and that the opportunity has ended.
+     * Awards the opportunity's pointsReward to the volunteer.
+     */
+    @Transactional
+    public ApplicationResponse completeApplication(Long applicationId, Long userId) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        Opportunity opportunity = application.getOpportunity();
+
+        // Check if user is the promoter or an admin
+        boolean isOwner = opportunity.getPromoter().getId().equals(userId);
+        boolean isAdmin = user.getRole() == UserRole.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new OpportunityOwnershipException("Only the opportunity promoter or admin can complete applications");
+        }
+
+        // Check if application is in APPROVED status
+        if (application.getStatus() != ApplicationStatus.APPROVED) {
+            throw new InvalidApplicationStatusException(
+                    "Cannot complete application with status: " + application.getStatus());
+        }
+
+        // Check if opportunity has ended
+        if (opportunity.getEndDate().isAfter(LocalDateTime.now())) {
+            throw new OpportunityNotEndedException();
+        }
+
+        // Mark application as completed
+        application.setStatus(ApplicationStatus.COMPLETED);
+        application.setCompletedAt(LocalDateTime.now());
+
+        // Award points to the volunteer
+        User volunteer = application.getVolunteer();
+        Integer pointsReward = opportunity.getPointsReward();
+        if (pointsReward != null && pointsReward > 0) {
+            volunteer.setPoints(volunteer.getPoints() + pointsReward);
+            userRepository.save(volunteer);
+            log.info("Awarded {} points to volunteer {} for completing opportunity '{}'",
+                    pointsReward, volunteer.getId(), opportunity.getTitle());
+        }
+
+        Application savedApplication = applicationRepository.save(application);
+        log.info("Application {} marked as completed by user {} for opportunity '{}'",
                 applicationId, userId, opportunity.getTitle());
 
         return ApplicationResponse.fromApplication(savedApplication);
