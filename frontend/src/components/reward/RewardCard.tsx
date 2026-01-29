@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Award, Building2, Calendar, Package } from 'lucide-react'
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import {
@@ -28,8 +29,8 @@ export function RewardCard({ reward, showActions, onEdit, onDelete }: RewardCard
     })
   }
 
-  return (
-    <Card className={`relative ${!available ? 'opacity-60' : ''}`}>
+  const cardContent = (
+    <>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -85,7 +86,11 @@ export function RewardCard({ reward, showActions, onEdit, onDelete }: RewardCard
             {onEdit && (
               <button
                 type="button"
-                onClick={() => onEdit(reward)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onEdit(reward)
+                }}
                 className="text-sm text-primary hover:underline"
               >
                 Edit
@@ -94,7 +99,11 @@ export function RewardCard({ reward, showActions, onEdit, onDelete }: RewardCard
             {onDelete && (
               <button
                 type="button"
-                onClick={() => onDelete(reward)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onDelete(reward)
+                }}
                 className="text-sm text-destructive hover:underline"
               >
                 Deactivate
@@ -103,6 +112,24 @@ export function RewardCard({ reward, showActions, onEdit, onDelete }: RewardCard
           </div>
         )}
       </CardContent>
-    </Card>
+    </>
+  )
+
+  // If showing actions (admin view), don't make the card clickable
+  if (showActions) {
+    return (
+      <Card className={`relative ${!available ? 'opacity-60' : ''}`}>
+        {cardContent}
+      </Card>
+    )
+  }
+
+  // Public view - make the card clickable
+  return (
+    <Link to="/rewards/$rewardId" params={{ rewardId: reward.id.toString() }} className="block">
+      <Card className={`relative transition-shadow hover:shadow-md ${!available ? 'opacity-60' : ''}`}>
+        {cardContent}
+      </Card>
+    </Link>
   )
 }

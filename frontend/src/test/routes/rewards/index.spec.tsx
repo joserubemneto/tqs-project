@@ -21,11 +21,12 @@ vi.mock('@/lib/reward', async () => {
   }
 })
 
-// Mock the RewardCard component to simplify testing
+// Mock the reward components to simplify testing
 vi.mock('@/components/reward', () => ({
   RewardCard: ({ reward }: { reward: RewardResponse }) => (
     <div data-testid={`reward-card-${reward.id}`}>{reward.title}</div>
   ),
+  RewardFilters: () => <div data-testid="reward-filters">Filters</div>,
 }))
 
 const mockRewards: RewardResponse[] = [
