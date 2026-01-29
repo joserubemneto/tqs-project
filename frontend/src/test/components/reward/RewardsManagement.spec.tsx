@@ -168,4 +168,139 @@ describe('RewardsManagement', () => {
     expect(editButtons).toHaveLength(2)
     expect(deactivateButtons).toHaveLength(2)
   })
+
+  it('should open edit form when Edit button is clicked', async () => {
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Free Coffee')).toBeInTheDocument()
+    })
+
+    const editButtons = screen.getAllByText('Edit')
+    fireEvent.click(editButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Reward')).toBeInTheDocument()
+    })
+  })
+
+  it('should close edit form when Cancel is clicked', async () => {
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Free Coffee')).toBeInTheDocument()
+    })
+
+    // Open edit form
+    const editButtons = screen.getAllByText('Edit')
+    fireEvent.click(editButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Reward')).toBeInTheDocument()
+    })
+
+    // Click Cancel
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Edit Reward')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should close create form when Cancel is clicked', async () => {
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Add Reward/ })).toBeInTheDocument()
+    })
+
+    // Open create form
+    fireEvent.click(screen.getByRole('button', { name: /Add Reward/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Create New Reward')).toBeInTheDocument()
+    })
+
+    // Click Cancel
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Create New Reward')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should call delete mutation when Deactivate is clicked and confirmed', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockDeleteReward.mockResolvedValue(undefined)
+
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Free Coffee')).toBeInTheDocument()
+    })
+
+    const deactivateButtons = screen.getAllByText('Deactivate')
+    fireEvent.click(deactivateButtons[0])
+
+    expect(confirmSpy).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mockDeleteReward).toHaveBeenCalledWith(1)
+    })
+
+    confirmSpy.mockRestore()
+  })
+
+  it('should not call delete mutation when Deactivate is cancelled', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Free Coffee')).toBeInTheDocument()
+    })
+
+    const deactivateButtons = screen.getAllByText('Deactivate')
+    fireEvent.click(deactivateButtons[0])
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(mockDeleteReward).not.toHaveBeenCalled()
+
+    confirmSpy.mockRestore()
+  })
+
+  it('should show pagination when multiple pages exist', async () => {
+    mockGetRewards.mockResolvedValue({
+      ...mockPageResponse,
+      totalPages: 3,
+      totalElements: 25,
+    })
+
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 of 3')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: /Previous/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Next/ })).not.toBeDisabled()
+  })
+
+  it('should navigate to next page when Next is clicked', async () => {
+    mockGetRewards.mockResolvedValue({
+      ...mockPageResponse,
+      totalPages: 3,
+      totalElements: 25,
+    })
+
+    renderWithQueryClient(<RewardsManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 of 3')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Next/ }))
+
+    await waitFor(() => {
+      expect(mockGetRewards).toHaveBeenCalledWith(1, 10)
+    })
+  })
 })
