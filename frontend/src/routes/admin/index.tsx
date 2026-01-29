@@ -60,13 +60,15 @@ function AdminDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Opportunities</CardTitle>
-            <CardDescription>Review and approve volunteering opportunities</CardDescription>
+            <CardTitle>Manage Rewards</CardTitle>
+            <CardDescription>Create and manage rewards for volunteers</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="secondary" className="w-full" disabled>
-              Coming Soon
-            </Button>
+            <Link to="/admin/rewards">
+              <Button variant="primary" className="w-full">
+                View Rewards
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 

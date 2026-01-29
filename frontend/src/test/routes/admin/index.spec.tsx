@@ -108,11 +108,19 @@ describe('AdminDashboard', () => {
       expect(viewUsersLink).toHaveAttribute('href', '/admin/users')
     })
 
-    it('should render Opportunities card', () => {
+    it('should render Manage Rewards card', () => {
       render(<AdminDashboard />)
 
-      expect(screen.getByText('Opportunities')).toBeInTheDocument()
-      expect(screen.getByText(/review and approve volunteering opportunities/i)).toBeInTheDocument()
+      expect(screen.getByText('Manage Rewards')).toBeInTheDocument()
+      expect(screen.getByText(/create and manage rewards for volunteers/i)).toBeInTheDocument()
+    })
+
+    it('should render View Rewards button with link to /admin/rewards', () => {
+      render(<AdminDashboard />)
+
+      const viewRewardsLink = screen.getByRole('link', { name: /view rewards/i })
+      expect(viewRewardsLink).toBeInTheDocument()
+      expect(viewRewardsLink).toHaveAttribute('href', '/admin/rewards')
     })
 
     it('should render Reports card', () => {
@@ -122,14 +130,11 @@ describe('AdminDashboard', () => {
       expect(screen.getByText(/view platform analytics and reports/i)).toBeInTheDocument()
     })
 
-    it('should have Coming Soon buttons disabled', () => {
+    it('should have Coming Soon button disabled', () => {
       render(<AdminDashboard />)
 
-      const comingSoonButtons = screen.getAllByRole('button', { name: /coming soon/i })
-      expect(comingSoonButtons).toHaveLength(2)
-      for (const button of comingSoonButtons) {
-        expect(button).toBeDisabled()
-      }
+      const comingSoonButton = screen.getByRole('button', { name: /coming soon/i })
+      expect(comingSoonButton).toBeDisabled()
     })
   })
 

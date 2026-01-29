@@ -540,6 +540,102 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleRewardNotFound()")
+    class HandleRewardNotFound {
+
+        @Test
+        @DisplayName("should return NOT_FOUND status with error message")
+        void shouldReturnNotFoundStatus() {
+            RewardNotFoundException exception = new RewardNotFoundException(123L);
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotFound(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(404);
+            assertThat(response.getBody().getError()).isEqualTo("Not Found");
+            assertThat(response.getBody().getMessage()).isEqualTo("Reward not found with id: 123");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Reward with given ID does not exist";
+            RewardNotFoundException exception = new RewardNotFoundException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardNotFound(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handlePartnerNotFound()")
+    class HandlePartnerNotFound {
+
+        @Test
+        @DisplayName("should return NOT_FOUND status with error message")
+        void shouldReturnNotFoundStatus() {
+            PartnerNotFoundException exception = new PartnerNotFoundException(456L);
+
+            ResponseEntity<ErrorResponse> response = handler.handlePartnerNotFound(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(404);
+            assertThat(response.getBody().getError()).isEqualTo("Not Found");
+            assertThat(response.getBody().getMessage()).isEqualTo("Partner not found with id: 456");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Partner with given ID does not exist";
+            PartnerNotFoundException exception = new PartnerNotFoundException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handlePartnerNotFound(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleRewardValidation()")
+    class HandleRewardValidation {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            RewardValidationException exception = new RewardValidationException("Available until date must be after available from date");
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardValidation(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("Available until date must be after available from date");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "Points cost must be positive";
+            RewardValidationException exception = new RewardValidationException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleRewardValidation(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 
