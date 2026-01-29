@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import ua.tqs.dto.LoginRequest;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.UserRole;
+import ua.tqs.repository.OpportunityRepository;
 import ua.tqs.repository.UserRepository;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,6 +26,9 @@ public class LoginSteps {
     private UserRepository userRepository;
 
     @Autowired
+    private OpportunityRepository opportunityRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -34,6 +38,7 @@ public class LoginSteps {
 
     @Before
     public void setUp() {
+        opportunityRepository.deleteAll();
         userRepository.deleteAll();
         context.reset();
     }

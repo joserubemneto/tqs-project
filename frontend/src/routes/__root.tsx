@@ -38,6 +38,13 @@ function RootComponent() {
                       </Button>
                     </Link>
                   )}
+                  {(user.role === 'PROMOTER' || user.role === 'ADMIN') && (
+                    <Link to="/opportunities/create">
+                      <Button variant="secondary" size="sm">
+                        Create Opportunity
+                      </Button>
+                    </Link>
+                  )}
                   <Link to="/profile">
                     <Button variant="ghost" size="sm">
                       My Profile

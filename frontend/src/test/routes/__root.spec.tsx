@@ -163,6 +163,12 @@ describe('RootComponent', () => {
       expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
     })
 
+    it('should not show Create Opportunity button for volunteers', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('Create Opportunity')).not.toBeInTheDocument()
+    })
+
     it('should not show Sign In or Get Started buttons', () => {
       render(<RootComponent />)
 
@@ -235,6 +241,108 @@ describe('RootComponent', () => {
       // Admin should also have profile links (My Profile button + Avatar)
       const profileLinks = screen.getAllByTestId('link-/profile')
       expect(profileLinks).toHaveLength(2)
+    })
+
+    it('should show Create Opportunity button for admin users', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Create Opportunity')).toBeInTheDocument()
+    })
+
+    it('should have correct link for Create Opportunity for admin users', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByTestId('link-/opportunities/create')).toBeInTheDocument()
+    })
+  })
+
+  describe('logged in as PROMOTER', () => {
+    const promoterUser = {
+      id: 3,
+      email: 'promoter@ua.pt',
+      name: 'Test Promoter',
+      role: 'PROMOTER' as const,
+    }
+
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({
+        user: promoterUser,
+        isLoading: false,
+        logout: mockLogout,
+      })
+    })
+
+    it('should show user name and role', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Test Promoter')).toBeInTheDocument()
+      expect(screen.getByText('PROMOTER')).toBeInTheDocument()
+    })
+
+    it('should show Create Opportunity button for promoters', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Create Opportunity')).toBeInTheDocument()
+    })
+
+    it('should have correct link for Create Opportunity', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByTestId('link-/opportunities/create')).toBeInTheDocument()
+    })
+
+    it('should not show Admin Panel button for promoters', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
+    })
+
+    it('should show My Profile button', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('My Profile')).toBeInTheDocument()
+    })
+
+    it('should show logout button', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Logout')).toBeInTheDocument()
+    })
+  })
+
+  describe('logged in as PARTNER', () => {
+    const partnerUser = {
+      id: 4,
+      email: 'partner@ua.pt',
+      name: 'Test Partner',
+      role: 'PARTNER' as const,
+    }
+
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({
+        user: partnerUser,
+        isLoading: false,
+        logout: mockLogout,
+      })
+    })
+
+    it('should show user name and role', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Test Partner')).toBeInTheDocument()
+      expect(screen.getByText('PARTNER')).toBeInTheDocument()
+    })
+
+    it('should not show Create Opportunity button for partners', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('Create Opportunity')).not.toBeInTheDocument()
+    })
+
+    it('should not show Admin Panel button for partners', () => {
+      render(<RootComponent />)
+
+      expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
     })
   })
 

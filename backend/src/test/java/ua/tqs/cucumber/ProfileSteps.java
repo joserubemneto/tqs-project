@@ -17,6 +17,7 @@ import ua.tqs.model.Skill;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.SkillCategory;
 import ua.tqs.model.enums.UserRole;
+import ua.tqs.repository.OpportunityRepository;
 import ua.tqs.repository.SkillRepository;
 import ua.tqs.repository.UserRepository;
 import ua.tqs.service.JwtService;
@@ -40,6 +41,9 @@ public class ProfileSteps {
     private SkillRepository skillRepository;
 
     @Autowired
+    private OpportunityRepository opportunityRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -51,16 +55,15 @@ public class ProfileSteps {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private User currentUser;
-    private String authToken;
     private Skill communicationSkill;
     private Skill leadershipSkill;
 
     @Before
     public void setUp() {
+        opportunityRepository.deleteAll();
         userRepository.deleteAll();
         skillRepository.deleteAll();
         context.reset();
-        authToken = null;
         currentUser = null;
     }
 
@@ -80,7 +83,7 @@ public class ProfileSteps {
 
     @Given("the user is authenticated")
     public void theUserIsAuthenticated() {
-        authToken = jwtService.generateToken(currentUser);
+        context.setAuthToken(jwtService.generateToken(currentUser));
     }
 
     @Given("skills exist in the system")
@@ -98,11 +101,10 @@ public class ProfileSteps {
                 .description("Ability to lead teams")
                 .build();
         leadershipSkill = skillRepository.save(leadershipSkill);
-    }
 
-    @Given("I am not authenticated")
-    public void iAmNotAuthenticated() {
-        authToken = null;
+        // Store in shared context for other step classes
+        context.setCommunicationSkill(communicationSkill);
+        context.setLeadershipSkill(leadershipSkill);
     }
 
     @Given("my profile has the skill {string}")
@@ -117,8 +119,8 @@ public class ProfileSteps {
         var requestBuilder = get("/api/profile")
                 .contentType(MediaType.APPLICATION_JSON);
 
-        if (authToken != null) {
-            requestBuilder.header("Authorization", "Bearer " + authToken);
+        if (context.getAuthToken() != null) {
+            requestBuilder.header("Authorization", "Bearer " + context.getAuthToken());
         }
 
         MvcResult result = mockMvc.perform(requestBuilder).andReturn();
@@ -198,7 +200,7 @@ public class ProfileSteps {
     @When("I request all skills")
     public void iRequestAllSkills() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/skills")
-                        .header("Authorization", "Bearer " + authToken)
+                        .header("Authorization", "Bearer " + context.getAuthToken())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
 
@@ -208,7 +210,7 @@ public class ProfileSteps {
     @When("I request skills with category {string}")
     public void iRequestSkillsWithCategory(String category) throws Exception {
         MvcResult result = mockMvc.perform(get("/api/skills")
-                        .header("Authorization", "Bearer " + authToken)
+                        .header("Authorization", "Bearer " + context.getAuthToken())
                         .param("category", category)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -287,7 +289,7 @@ public class ProfileSteps {
 
     private void performProfileUpdate(UpdateProfileRequest request) throws Exception {
         MvcResult result = mockMvc.perform(put("/api/profile")
-                        .header("Authorization", "Bearer " + authToken)
+                        .header("Authorization", "Bearer " + context.getAuthToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andReturn();

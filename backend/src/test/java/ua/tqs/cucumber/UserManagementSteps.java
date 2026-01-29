@@ -16,6 +16,7 @@ import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.UpdateRoleRequest;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.UserRole;
+import ua.tqs.repository.OpportunityRepository;
 import ua.tqs.repository.UserRepository;
 import ua.tqs.service.JwtService;
 
@@ -29,6 +30,9 @@ public class UserManagementSteps {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private OpportunityRepository opportunityRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -47,6 +51,7 @@ public class UserManagementSteps {
 
     @Before
     public void setUp() {
+        opportunityRepository.deleteAll();
         userRepository.deleteAll();
         context.reset();
         authToken = null;
