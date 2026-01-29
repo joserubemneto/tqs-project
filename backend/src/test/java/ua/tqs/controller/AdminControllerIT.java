@@ -184,6 +184,188 @@ class AdminControllerIT {
                     .andExpect(jsonPath("$.users.length()").value(0))
                     .andExpect(jsonPath("$.totalElements").value(0));
         }
+
+        @Test
+        @DisplayName("should sort users by name ascending")
+        void shouldSortByNameAscending() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "name")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(3))
+                    .andExpect(jsonPath("$.users[0].name").value("Admin User"))
+                    .andExpect(jsonPath("$.users[1].name").value("Promoter User"))
+                    .andExpect(jsonPath("$.users[2].name").value("Volunteer User"));
+        }
+
+        @Test
+        @DisplayName("should sort users by name descending")
+        void shouldSortByNameDescending() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "name")
+                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(3))
+                    .andExpect(jsonPath("$.users[0].name").value("Volunteer User"))
+                    .andExpect(jsonPath("$.users[1].name").value("Promoter User"))
+                    .andExpect(jsonPath("$.users[2].name").value("Admin User"));
+        }
+
+        @Test
+        @DisplayName("should sort users by email ascending")
+        void shouldSortByEmailAscending() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "email")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(3))
+                    .andExpect(jsonPath("$.users[0].email").value("admin@ua.pt"))
+                    .andExpect(jsonPath("$.users[1].email").value("promoter@ua.pt"))
+                    .andExpect(jsonPath("$.users[2].email").value("volunteer@ua.pt"));
+        }
+
+        @Test
+        @DisplayName("should sort users by points descending")
+        void shouldSortByPointsDescending() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "points")
+                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(3))
+                    .andExpect(jsonPath("$.users[0].points").value(100))
+                    .andExpect(jsonPath("$.users[1].points").value(50))
+                    .andExpect(jsonPath("$.users[2].points").value(0));
+        }
+
+        @Test
+        @DisplayName("should use default sort (createdAt desc) when no sort params provided")
+        void shouldUseDefaultSortWhenNotProvided() throws Exception {
+            // Default is createdAt descending
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(3))
+                    // promoterUser created last, should be first
+                    .andExpect(jsonPath("$.users[0].email").value("promoter@ua.pt"));
+        }
+
+        @Test
+        @DisplayName("should handle case insensitive sort direction (ASC)")
+        void shouldHandleCaseInsensitiveSortDirectionUppercase() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "name")
+                    .param("sortDir", "ASC"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users[0].name").value("Admin User"));
+        }
+
+        @Test
+        @DisplayName("should handle case insensitive sort direction (Asc)")
+        void shouldHandleCaseInsensitiveSortDirectionMixed() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "name")
+                    .param("sortDir", "Asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users[0].name").value("Admin User"));
+        }
+
+        @Test
+        @DisplayName("should default to descending when invalid sort direction provided")
+        void shouldDefaultToDescendingForInvalidSortDirection() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("sortBy", "name")
+                    .param("sortDir", "invalid"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users[0].name").value("Volunteer User"));
+        }
+
+        @Test
+        @DisplayName("should combine sorting with search filter")
+        void shouldCombineSortingWithSearch() throws Exception {
+            // Add more users for better testing
+            User volunteerUser2 = User.builder()
+                    .email("another_volunteer@ua.pt")
+                    .password(passwordEncoder.encode("Pass123"))
+                    .name("Another Volunteer")
+                    .role(UserRole.VOLUNTEER)
+                    .points(200)
+                    .build();
+            userRepository.save(volunteerUser2);
+
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("search", "volunteer")
+                    .param("sortBy", "points")
+                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(2))
+                    .andExpect(jsonPath("$.users[0].points").value(200))
+                    .andExpect(jsonPath("$.users[1].points").value(100));
+        }
+
+        @Test
+        @DisplayName("should combine sorting with role filter")
+        void shouldCombineSortingWithRoleFilter() throws Exception {
+            // Add another volunteer
+            User volunteerUser2 = User.builder()
+                    .email("alpha_volunteer@ua.pt")
+                    .password(passwordEncoder.encode("Pass123"))
+                    .name("Alpha Volunteer")
+                    .role(UserRole.VOLUNTEER)
+                    .points(50)
+                    .build();
+            userRepository.save(volunteerUser2);
+
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("role", "VOLUNTEER")
+                    .param("sortBy", "name")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(2))
+                    .andExpect(jsonPath("$.users[0].name").value("Alpha Volunteer"))
+                    .andExpect(jsonPath("$.users[1].name").value("Volunteer User"));
+        }
+
+        @Test
+        @DisplayName("should combine pagination with sorting")
+        void shouldCombinePaginationWithSorting() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("page", "0")
+                    .param("size", "2")
+                    .param("sortBy", "name")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(2))
+                    .andExpect(jsonPath("$.users[0].name").value("Admin User"))
+                    .andExpect(jsonPath("$.users[1].name").value("Promoter User"))
+                    .andExpect(jsonPath("$.hasNext").value(true));
+        }
+
+        @Test
+        @DisplayName("should return second page with correct sorted order")
+        void shouldReturnSecondPageWithSortedOrder() throws Exception {
+            mockMvc.perform(get("/api/admin/users")
+                    .header("Authorization", "Bearer " + adminToken)
+                    .param("page", "1")
+                    .param("size", "2")
+                    .param("sortBy", "name")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.users.length()").value(1))
+                    .andExpect(jsonPath("$.users[0].name").value("Volunteer User"))
+                    .andExpect(jsonPath("$.currentPage").value(1))
+                    .andExpect(jsonPath("$.hasPrevious").value(true))
+                    .andExpect(jsonPath("$.hasNext").value(false));
+        }
     }
 
     @Nested
