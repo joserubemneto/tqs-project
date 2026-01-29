@@ -1,6 +1,6 @@
+import { ChevronDown } from 'lucide-react'
 import * as React from 'react'
 import { tv, type VariantProps } from 'tailwind-variants'
-import { ChevronDown } from 'lucide-react'
 
 const selectVariants = tv({
   base: 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer',

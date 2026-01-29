@@ -139,7 +139,9 @@ describe('Select', () => {
     })
 
     it('passes through additional HTML attributes', () => {
-      render(<Select options={defaultOptions} name="my-select" id="select-id" data-testid="select" />)
+      render(
+        <Select options={defaultOptions} name="my-select" id="select-id" data-testid="select" />,
+      )
 
       const select = screen.getByTestId('select')
       expect(select).toHaveAttribute('name', 'my-select')
@@ -147,7 +149,14 @@ describe('Select', () => {
     })
 
     it('respects controlled value prop', () => {
-      render(<Select options={defaultOptions} value="option2" onChange={() => {}} data-testid="select" />)
+      render(
+        <Select
+          options={defaultOptions}
+          value="option2"
+          onChange={() => {}}
+          data-testid="select"
+        />,
+      )
 
       const select = screen.getByTestId('select') as HTMLSelectElement
       expect(select.value).toBe('option2')

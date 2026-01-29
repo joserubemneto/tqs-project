@@ -1,13 +1,12 @@
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@/test/test-utils'
-import userEvent from '@testing-library/user-event'
 
 // Mock TanStack Router
 const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute:
-    (_path: string) =>
-    (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
+    (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
       ...options,
       options,
     }),
@@ -58,9 +57,30 @@ vi.mock('@tanstack/react-query', async () => {
     useQuery: vi.fn(() => ({
       data: {
         users: [
-          { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
-          { id: 2, email: 'volunteer@ua.pt', name: 'Volunteer User', role: 'VOLUNTEER', points: 100, createdAt: '2024-01-02' },
-          { id: 3, email: 'promoter@ua.pt', name: 'Promoter User', role: 'PROMOTER', points: 50, createdAt: '2024-01-03' },
+          {
+            id: 1,
+            email: 'admin@ua.pt',
+            name: 'Admin User',
+            role: 'ADMIN',
+            points: 0,
+            createdAt: '2024-01-01',
+          },
+          {
+            id: 2,
+            email: 'volunteer@ua.pt',
+            name: 'Volunteer User',
+            role: 'VOLUNTEER',
+            points: 100,
+            createdAt: '2024-01-02',
+          },
+          {
+            id: 3,
+            email: 'promoter@ua.pt',
+            name: 'Promoter User',
+            role: 'PROMOTER',
+            points: 50,
+            createdAt: '2024-01-03',
+          },
         ],
         currentPage: 0,
         totalPages: 1,

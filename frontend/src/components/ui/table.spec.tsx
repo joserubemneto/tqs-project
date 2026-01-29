@@ -1,7 +1,7 @@
 import { createRef } from 'react'
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@/test/test-utils'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'
 
 describe('Table Components', () => {
   describe('Table', () => {

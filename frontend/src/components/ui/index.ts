@@ -4,4 +4,4 @@ export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export { Input, type InputProps, inputVariants } from './input'
 export { Label, type LabelProps } from './label'
 export { Select, type SelectProps, selectVariants } from './select'
-export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './table'
+export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table'

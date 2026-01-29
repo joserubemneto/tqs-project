@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { ShieldAlert } from 'lucide-react'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui'
 import { getAuthToken, isAdmin } from '@/lib/auth'
-import { ShieldAlert } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: () => {

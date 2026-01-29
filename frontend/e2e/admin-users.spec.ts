@@ -32,8 +32,22 @@ test.describe('Admin User Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             users: [
-              { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
-              { id: 2, email: 'volunteer@ua.pt', name: 'Volunteer User', role: 'VOLUNTEER', points: 100, createdAt: '2024-01-02' },
+              {
+                id: 1,
+                email: 'admin@ua.pt',
+                name: 'Admin User',
+                role: 'ADMIN',
+                points: 0,
+                createdAt: '2024-01-01',
+              },
+              {
+                id: 2,
+                email: 'volunteer@ua.pt',
+                name: 'Volunteer User',
+                role: 'VOLUNTEER',
+                points: 100,
+                createdAt: '2024-01-02',
+              },
             ],
             currentPage: 0,
             totalPages: 1,
@@ -59,9 +73,30 @@ test.describe('Admin User Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             users: [
-              { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
-              { id: 2, email: 'volunteer@ua.pt', name: 'Volunteer User', role: 'VOLUNTEER', points: 100, createdAt: '2024-01-02' },
-              { id: 3, email: 'promoter@ua.pt', name: 'Promoter User', role: 'PROMOTER', points: 50, createdAt: '2024-01-03' },
+              {
+                id: 1,
+                email: 'admin@ua.pt',
+                name: 'Admin User',
+                role: 'ADMIN',
+                points: 0,
+                createdAt: '2024-01-01',
+              },
+              {
+                id: 2,
+                email: 'volunteer@ua.pt',
+                name: 'Volunteer User',
+                role: 'VOLUNTEER',
+                points: 100,
+                createdAt: '2024-01-02',
+              },
+              {
+                id: 3,
+                email: 'promoter@ua.pt',
+                name: 'Promoter User',
+                role: 'PROMOTER',
+                points: 50,
+                createdAt: '2024-01-03',
+              },
             ],
             currentPage: 0,
             totalPages: 1,
@@ -113,7 +148,14 @@ test.describe('Admin User Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             users: [
-              { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
+              {
+                id: 1,
+                email: 'admin@ua.pt',
+                name: 'Admin User',
+                role: 'ADMIN',
+                points: 0,
+                createdAt: '2024-01-01',
+              },
             ],
             currentPage: 0,
             totalPages: 1,
@@ -189,8 +231,22 @@ test.describe('Admin User Management', () => {
         searchTerm = url.searchParams.get('search') || ''
 
         const allUsers = [
-          { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
-          { id: 2, email: 'volunteer@ua.pt', name: 'Volunteer User', role: 'VOLUNTEER', points: 100, createdAt: '2024-01-02' },
+          {
+            id: 1,
+            email: 'admin@ua.pt',
+            name: 'Admin User',
+            role: 'ADMIN',
+            points: 0,
+            createdAt: '2024-01-01',
+          },
+          {
+            id: 2,
+            email: 'volunteer@ua.pt',
+            name: 'Volunteer User',
+            role: 'VOLUNTEER',
+            points: 100,
+            createdAt: '2024-01-02',
+          },
         ]
 
         const filteredUsers = searchTerm
@@ -241,7 +297,10 @@ test.describe('Admin User Management', () => {
       await page.goto('/login')
       await page.getByLabel(/email/i).fill('admin@ua.pt')
       await page.getByLabel(/password/i).fill('Admin@2024!')
-      await page.locator('form').getByRole('button', { name: /sign in/i }).click()
+      await page
+        .locator('form')
+        .getByRole('button', { name: /sign in/i })
+        .click()
       await expect(page).toHaveURL('/admin')
     })
 
@@ -301,8 +360,22 @@ test.describe('Admin User Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             users: [
-              { id: 1, email: 'user1@ua.pt', name: 'User 1', role: 'VOLUNTEER', points: 0, createdAt: '2024-01-01' },
-              { id: 2, email: 'user2@ua.pt', name: 'User 2', role: 'VOLUNTEER', points: 0, createdAt: '2024-01-02' },
+              {
+                id: 1,
+                email: 'user1@ua.pt',
+                name: 'User 1',
+                role: 'VOLUNTEER',
+                points: 0,
+                createdAt: '2024-01-01',
+              },
+              {
+                id: 2,
+                email: 'user2@ua.pt',
+                name: 'User 2',
+                role: 'VOLUNTEER',
+                points: 0,
+                createdAt: '2024-01-02',
+              },
             ],
             currentPage: 0,
             totalPages: 3,
@@ -331,7 +404,14 @@ test.describe('Admin User Management', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             users: [
-              { id: 1, email: 'admin@ua.pt', name: 'Admin User', role: 'ADMIN', points: 0, createdAt: '2024-01-01' },
+              {
+                id: 1,
+                email: 'admin@ua.pt',
+                name: 'Admin User',
+                role: 'ADMIN',
+                points: 0,
+                createdAt: '2024-01-01',
+              },
             ],
             currentPage: 0,
             totalPages: 1,

@@ -3,8 +3,8 @@ import { ApiError } from './api'
 import {
   clearAuthToken,
   getAuthToken,
-  getUsers,
   getUserRoleFromToken,
+  getUsers,
   isAdmin,
   isAuthenticated,
   login,

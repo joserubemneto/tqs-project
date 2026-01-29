@@ -1,7 +1,17 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, useEffect, useCallback } from 'react'
 import {
+  AlertCircle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Search,
+  X,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -9,17 +19,22 @@ import {
   CardTitle,
   Input,
   Select,
-  Badge,
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui'
-import { getAuthToken, isAdmin, getUsers, updateUserRole, type UserRole, type UserResponse } from '@/lib/auth'
 import { useAuth } from '@/contexts/AuthContext'
-import { ChevronLeft, ChevronRight, Search, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import {
+  getAuthToken,
+  getUsers,
+  isAdmin,
+  type UserResponse,
+  type UserRole,
+  updateUserRole,
+} from '@/lib/auth'
 
 export const Route = createFileRoute('/admin/users')({
   beforeLoad: () => {
@@ -43,7 +58,10 @@ const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Admin' },
 ]
 
-const ROLE_BADGE_VARIANTS: Record<UserRole, 'default' | 'secondary' | 'outline' | 'error' | 'success' | 'warning'> = {
+const ROLE_BADGE_VARIANTS: Record<
+  UserRole,
+  'default' | 'secondary' | 'outline' | 'error' | 'success' | 'warning'
+> = {
   VOLUNTEER: 'default',
   PROMOTER: 'secondary',
   PARTNER: 'outline',
@@ -61,7 +79,10 @@ function UsersPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('')
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error'
+    message: string
+  } | null>(null)
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
 
   // Debounce search
@@ -76,7 +97,7 @@ function UsersPage() {
   // Reset page when filter changes
   useEffect(() => {
     setPage(0)
-  }, [roleFilter])
+  }, [])
 
   // Clear notification after 5 seconds
   useEffect(() => {
@@ -105,7 +126,8 @@ function UsersPage() {
 
   // Update role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: number; role: UserRole }) => updateUserRole(userId, role),
+    mutationFn: ({ userId, role }: { userId: number; role: UserRole }) =>
+      updateUserRole(userId, role),
     onSuccess: (updatedUser) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       setNotification({
@@ -327,9 +349,7 @@ function UserRow({ user, currentUserId, isUpdating, onRoleChange }: UserRowProps
     <TableRow>
       <TableCell className="font-medium">
         {user.name}
-        {isCurrentUser && (
-          <span className="ml-2 text-xs text-muted-foreground">(you)</span>
-        )}
+        {isCurrentUser && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
       </TableCell>
       <TableCell>{user.email}</TableCell>
       <TableCell>

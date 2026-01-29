@@ -75,7 +75,9 @@ export function isAuthenticated(): boolean {
 /**
  * Decode JWT token to extract user information
  */
-function decodeToken(token: string): { id: number; email: string; name: string; role: UserRole } | null {
+function decodeToken(
+  token: string,
+): { id: number; email: string; name: string; role: UserRole } | null {
   try {
     const payload = token.split('.')[1]
     if (!payload) return null

@@ -6,7 +6,11 @@ const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute:
     (_path: string) =>
-    (options: { beforeLoad?: () => void; component: React.ComponentType; errorComponent?: React.ComponentType }) => ({
+    (options: {
+      beforeLoad?: () => void
+      component: React.ComponentType
+      errorComponent?: React.ComponentType
+    }) => ({
       ...options,
       options,
     }),
@@ -139,7 +143,9 @@ describe('AdminDashboard', () => {
     it('should render permission error message', () => {
       render(<AdminForbidden />)
 
-      expect(screen.getByText(/you don't have permission to access the admin panel/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/you don't have permission to access the admin panel/i),
+      ).toBeInTheDocument()
     })
 
     it('should render Return to Home button', () => {
