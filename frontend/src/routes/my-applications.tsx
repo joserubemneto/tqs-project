@@ -131,7 +131,7 @@ function MyApplicationsPage() {
             <p className="text-muted-foreground text-sm mt-2">
               Browse available opportunities and submit your first application
             </p>
-            <Link to="/opportunities" className={`${buttonVariants({ variant: 'default' })} mt-4`}>
+            <Link to="/opportunities" className={`${buttonVariants({ variant: 'primary' })} mt-4`}>
               Browse Opportunities
             </Link>
           </div>

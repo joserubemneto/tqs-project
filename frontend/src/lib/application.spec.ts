@@ -24,7 +24,7 @@ vi.mock('./api', async () => {
 
 // Mock fetch for getMyApplicationForOpportunity
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+globalThis.fetch = mockFetch
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -33,7 +33,7 @@ const mockLocalStorage = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
-Object.defineProperty(global, 'localStorage', {
+Object.defineProperty(globalThis, 'localStorage', {
   value: mockLocalStorage,
 })
 

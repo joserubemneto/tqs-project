@@ -6,6 +6,20 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.exception.OpportunityValidationException;
+import ua.tqs.exception.UserNotFoundException;
+import ua.tqs.model.Opportunity;
+import ua.tqs.model.Skill;
+import ua.tqs.model.User;
+import ua.tqs.model.enums.OpportunityStatus;
+import ua.tqs.repository.OpportunityRepository;
+import ua.tqs.repository.SkillRepository;
+import ua.tqs.repository.UserRepository;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Service for resetting the database to its initial state during E2E tests.
@@ -18,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class TestResetService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final OpportunityRepository opportunityRepository;
+    private final UserRepository userRepository;
+    private final SkillRepository skillRepository;
 
     // BCrypt hash of "password" - same as in data-integration-test.sql
     private static final String PASSWORD_HASH = "$2a$10$w/RTKkG/tQ00sCIK4ST9pOBE4disgBStZmOe7eHqP.QPB.8udzWeG";
