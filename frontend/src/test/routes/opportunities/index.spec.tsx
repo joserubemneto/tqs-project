@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OpportunityPageResponse, OpportunityResponse } from '@/lib/opportunity'
 import { render, screen } from '@/test/test-utils'
 
@@ -135,7 +135,9 @@ describe('OpportunitiesPage', () => {
 
       render(<OpportunitiesPage />)
 
-      expect(screen.getByRole('heading', { name: /volunteering opportunities/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: /volunteering opportunities/i }),
+      ).toBeInTheDocument()
       // Loader should be visible
       expect(document.querySelector('.animate-spin')).toBeInTheDocument()
     })
@@ -148,9 +150,7 @@ describe('OpportunitiesPage', () => {
       render(<OpportunitiesPage />)
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/no opportunities available at the moment/i),
-        ).toBeInTheDocument()
+        expect(screen.getByText(/no opportunities available at the moment/i)).toBeInTheDocument()
       })
     })
 
@@ -184,9 +184,7 @@ describe('OpportunitiesPage', () => {
       render(<OpportunitiesPage />)
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/help with university open day activities/i),
-        ).toBeInTheDocument()
+        expect(screen.getByText(/help with university open day activities/i)).toBeInTheDocument()
       })
     })
 

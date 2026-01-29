@@ -890,9 +890,7 @@ test.describe('View Opportunities List', () => {
 
       // Should not redirect to login
       await expect(page).toHaveURL('/opportunities')
-      await expect(
-        page.getByRole('heading', { name: /volunteering opportunities/i }),
-      ).toBeVisible()
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
     })
 
     test('should also work with authentication', async ({ page }) => {
@@ -915,9 +913,7 @@ test.describe('View Opportunities List', () => {
 
       await page.goto('/opportunities')
 
-      await expect(
-        page.getByRole('heading', { name: /volunteering opportunities/i }),
-      ).toBeVisible()
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
     })
   })
 
@@ -935,9 +931,7 @@ test.describe('View Opportunities List', () => {
     test('should display page heading', async ({ page }) => {
       await page.goto('/opportunities')
 
-      await expect(
-        page.getByRole('heading', { name: /volunteering opportunities/i }),
-      ).toBeVisible()
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
     })
 
     test('should display page description', async ({ page }) => {
@@ -969,9 +963,7 @@ test.describe('View Opportunities List', () => {
     test('should display opportunity description', async ({ page }) => {
       await page.goto('/opportunities')
 
-      await expect(
-        page.getByText(/help with university open day activities/i),
-      ).toBeVisible()
+      await expect(page.getByText(/help with university open day activities/i)).toBeVisible()
     })
 
     test('should display opportunity location', async ({ page }) => {
@@ -1017,9 +1009,7 @@ test.describe('View Opportunities List', () => {
 
       await page.goto('/opportunities')
 
-      await expect(
-        page.getByText(/no opportunities available at the moment/i),
-      ).toBeVisible()
+      await expect(page.getByText(/no opportunities available at the moment/i)).toBeVisible()
     })
 
     test('should show helpful message in empty state', async ({ page }) => {
@@ -1176,9 +1166,7 @@ test.describe('View Opportunities List', () => {
         await page.goto('/opportunities')
 
         // With fresh database, there should be no open opportunities
-        await expect(
-          page.getByText(/no opportunities available at the moment/i),
-        ).toBeVisible()
+        await expect(page.getByText(/no opportunities available at the moment/i)).toBeVisible()
       })
     })
   }
