@@ -44,6 +44,11 @@ test.describe('Volunteer Applications', () => {
       await page.goto('/')
     }
 
+    // Helper function to format date for LocalDateTime (without timezone)
+    function formatLocalDateTime(date: Date): string {
+      return date.toISOString().slice(0, 19) // "2024-02-01T09:00:00" without 'Z'
+    }
+
     // Helper function to create an OPEN opportunity via the test API
     // This bypasses the normal flow to create an opportunity with OPEN status directly
     async function createOpenOpportunity(
@@ -62,18 +67,25 @@ test.describe('Volunteer Applications', () => {
       const communicationSkill = skills.find((s: { name: string }) => s.name === 'Communication')
 
       const response = await request.post(`${API_URL}/api/test/opportunity`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         data: {
           title,
           description: 'E2E test opportunity for applications',
           pointsReward: 100,
           maxVolunteers: 5,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
+          startDate: formatLocalDateTime(startDate),
+          endDate: formatLocalDateTime(endDate),
           location: 'Test Location',
           requiredSkillIds: [communicationSkill.id],
         },
       })
 
+      if (!response.ok()) {
+        const errorBody = await response.text()
+        console.error(`Create opportunity failed: ${response.status()} - ${errorBody}`)
+      }
       expect(response.ok()).toBeTruthy()
       const opportunity = await response.json()
       return opportunity.id
