@@ -6,8 +6,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.AuthResponse;
+import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.RegisterRequest;
 import ua.tqs.exception.EmailAlreadyExistsException;
+import ua.tqs.exception.InvalidCredentialsException;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.UserRole;
 import ua.tqs.repository.UserRepository;
@@ -51,6 +53,36 @@ public class AuthService {
                 savedUser.getEmail(),
                 savedUser.getName(),
                 savedUser.getRole(),
+                token
+        );
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        log.debug("Attempting to login user with email: {}", request.getEmail());
+
+        // Find user by email
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    log.warn("Login failed: user not found - {}", request.getEmail());
+                    return new InvalidCredentialsException("Invalid credentials");
+                });
+
+        // Verify password
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Login failed: invalid password for user - {}", request.getEmail());
+            throw new InvalidCredentialsException("Invalid credentials");
+        }
+
+        log.info("User logged in successfully with id: {}", user.getId());
+
+        // Generate JWT token
+        String token = jwtService.generateToken(user);
+
+        return AuthResponse.of(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
                 token
         );
     }

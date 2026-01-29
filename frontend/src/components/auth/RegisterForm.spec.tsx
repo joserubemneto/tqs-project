@@ -3,6 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { RegisterForm } from './RegisterForm'
 
+// Mock TanStack Router
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, ...props }: { children: React.ReactNode; to: string }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
+}))
+
 // Mock the auth module
 vi.mock('@/lib/auth', () => ({
   register: vi.fn(),

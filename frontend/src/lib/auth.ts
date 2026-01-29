@@ -9,6 +9,11 @@ export interface RegisterRequest {
   role?: UserRole
 }
 
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
 export interface AuthResponse {
   id: number
   email: string
@@ -30,6 +35,13 @@ export interface AuthError {
  */
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
   return api.post<AuthResponse>('/auth/register', data)
+}
+
+/**
+ * Login an existing user
+ */
+export async function login(data: LoginRequest): Promise<AuthResponse> {
+  return api.post<AuthResponse>('/auth/login', data)
 }
 
 /**

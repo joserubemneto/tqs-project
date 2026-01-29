@@ -12,7 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.RegisterRequest;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.UserRole;
@@ -264,6 +264,165 @@ class AuthControllerIT {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class LoginEndpoint {
+
+        private void createTestUser(String email, String password) {
+            User user = User.builder()
+                    .email(email)
+                    .password(passwordEncoder.encode(password))
+                    .name("Test User")
+                    .role(UserRole.VOLUNTEER)
+                    .points(0)
+                    .build();
+            userRepository.save(user);
+        }
+
+        @Test
+        @DisplayName("should return 200 OK for valid credentials")
+        void shouldReturnOkForValidCredentials() throws Exception {
+            createTestUser("login@ua.pt", "SecurePass123");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("login@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return JSON content type")
+        void shouldReturnJsonContentType() throws Exception {
+            createTestUser("login@ua.pt", "SecurePass123");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("login@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("should return user details and token in response")
+        void shouldReturnUserDetailsAndToken() throws Exception {
+            createTestUser("login@ua.pt", "SecurePass123");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("login@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.email").value("login@ua.pt"))
+                    .andExpect(jsonPath("$.name").value("Test User"))
+                    .andExpect(jsonPath("$.role").value("VOLUNTEER"))
+                    .andExpect(jsonPath("$.token").isNotEmpty())
+                    .andExpect(jsonPath("$.id").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("should return 401 UNAUTHORIZED for wrong password")
+        void shouldReturnUnauthorizedForWrongPassword() throws Exception {
+            createTestUser("login@ua.pt", "SecurePass123");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("login@ua.pt")
+                    .password("WrongPassword")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Invalid credentials"));
+        }
+
+        @Test
+        @DisplayName("should return 401 UNAUTHORIZED for non-existent email")
+        void shouldReturnUnauthorizedForNonExistentEmail() throws Exception {
+            LoginRequest request = LoginRequest.builder()
+                    .email("nonexistent@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Invalid credentials"));
+        }
+
+        @Test
+        @DisplayName("should return 400 BAD REQUEST for invalid email format")
+        void shouldReturnBadRequestForInvalidEmail() throws Exception {
+            LoginRequest request = LoginRequest.builder()
+                    .email("invalid-email")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Invalid email format"));
+        }
+
+        @Test
+        @DisplayName("should return 400 BAD REQUEST for missing email")
+        void shouldReturnBadRequestForMissingEmail() throws Exception {
+            LoginRequest request = LoginRequest.builder()
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should return 400 BAD REQUEST for missing password")
+        void shouldReturnBadRequestForMissingPassword() throws Exception {
+            LoginRequest request = LoginRequest.builder()
+                    .email("test@ua.pt")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should be accessible without authentication")
+        void shouldBePublic() throws Exception {
+            createTestUser("login@ua.pt", "SecurePass123");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("login@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
         }
     }
 }

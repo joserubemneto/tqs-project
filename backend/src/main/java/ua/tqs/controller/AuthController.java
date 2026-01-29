@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ua.tqs.dto.AuthResponse;
+import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.RegisterRequest;
 import ua.tqs.exception.ErrorResponse;
 import ua.tqs.service.AuthService;
@@ -43,5 +44,21 @@ public class AuthController {
         log.info("Registration request received for email: {}", request.getEmail());
         AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Login user", description = "Authenticates user and returns JWT token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input data",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        log.info("Login request received for email: {}", request.getEmail());
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 }
