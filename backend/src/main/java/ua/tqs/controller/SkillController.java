@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/skills")
 @RequiredArgsConstructor
-@Tag(name = "Skills", description = "Skills listing endpoints")
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Skills", description = "Skills listing endpoints (public)")
 public class SkillController {
 
     private final ProfileService profileService;
@@ -27,8 +25,7 @@ public class SkillController {
     @GetMapping
     @Operation(summary = "Get all skills", description = "Get all available skills, optionally filtered by category")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved skills"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token")
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved skills")
     })
     public ResponseEntity<List<SkillResponse>> getSkills(
             @Parameter(description = "Filter by skill category")

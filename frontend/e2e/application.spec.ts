@@ -186,8 +186,8 @@ test.describe('Volunteer Applications', () => {
       await page.goto('/my-applications')
       await expect(page.getByText(uniqueTitle)).toBeVisible()
 
-      // Click on the application card to navigate to opportunity
-      await page.getByText(uniqueTitle).click()
+      // Click on the application card link (find the link that contains the title)
+      await page.locator('a').filter({ hasText: uniqueTitle }).click()
 
       // Should navigate to opportunity detail page
       await expect(page.getByTestId('opportunity-title')).toHaveText(uniqueTitle)
