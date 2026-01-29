@@ -16,7 +16,10 @@ import org.springframework.data.jpa.domain.Specification;
 import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
+import ua.tqs.dto.UpdateOpportunityRequest;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityOwnershipException;
+import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
 import ua.tqs.model.Opportunity;
@@ -818,6 +821,371 @@ class OpportunityServiceTest {
             // Assert
             assertThat(result.getContent()).isEmpty();
             assertThat(result.getTotalElements()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("updateOpportunity()")
+    class UpdateOpportunityMethod {
+
+        @Test
+        @DisplayName("should update opportunity with valid data")
+        void shouldUpdateOpportunityWithValidData() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .description("Updated description")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.updateOpportunity(1L, 1L, request, false);
+
+            // Assert
+            assertThat(response.getTitle()).isEqualTo("Updated Title");
+            assertThat(response.getDescription()).isEqualTo("Updated description");
+        }
+
+        @Test
+        @DisplayName("should update only provided fields")
+        void shouldUpdateOnlyProvidedFields() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("New Title Only")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.updateOpportunity(1L, 1L, request, false);
+
+            // Assert
+            assertThat(response.getTitle()).isEqualTo("New Title Only");
+            assertThat(response.getDescription()).isEqualTo("Help with university open day activities"); // unchanged
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity not found")
+        void shouldThrowExceptionWhenOpportunityNotFound() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 999L, request, false))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner")
+        void shouldThrowExceptionWhenUserIsNotOwner() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert - User with ID 999 is not the owner (promoter has ID 1)
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(999L, 1L, request, false))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Access denied");
+        }
+
+        @Test
+        @DisplayName("should allow admin to update any opportunity")
+        void shouldAllowAdminToUpdateAnyOpportunity() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Admin Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act - Admin (different user ID but isAdmin=true)
+            OpportunityResponse response = opportunityService.updateOpportunity(999L, 1L, request, true);
+
+            // Assert
+            assertThat(response.getTitle()).isEqualTo("Admin Updated Title");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is IN_PROGRESS")
+        void shouldThrowExceptionWhenOpportunityIsInProgress() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.IN_PROGRESS);
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot edit opportunity in current status");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is COMPLETED")
+        void shouldThrowExceptionWhenOpportunityIsCompleted() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.COMPLETED);
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot edit opportunity in current status");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is CANCELLED")
+        void shouldThrowExceptionWhenOpportunityIsCancelled() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.CANCELLED);
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Title")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot edit opportunity in current status");
+        }
+
+        @Test
+        @DisplayName("should allow update when opportunity is OPEN")
+        void shouldAllowUpdateWhenOpportunityIsOpen() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.OPEN);
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .title("Updated Open Opportunity")
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.updateOpportunity(1L, 1L, request, false);
+
+            // Assert
+            assertThat(response.getTitle()).isEqualTo("Updated Open Opportunity");
+        }
+
+        @Test
+        @DisplayName("should throw exception when end date is before start date")
+        void shouldThrowExceptionWhenEndDateBeforeStartDate() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .startDate(LocalDateTime.now().plusDays(10))
+                    .endDate(LocalDateTime.now().plusDays(1))
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityValidationException.class)
+                    .hasMessage("End date must be after start date");
+        }
+
+        @Test
+        @DisplayName("should throw exception when reducing maxVolunteers below enrolled count")
+        void shouldThrowExceptionWhenReducingMaxVolunteersBelowEnrolled() {
+            // Arrange
+            savedOpportunity.setApplications(Set.of(
+                    ua.tqs.model.Application.builder().id(1L).build(),
+                    ua.tqs.model.Application.builder().id(2L).build(),
+                    ua.tqs.model.Application.builder().id(3L).build()
+            ));
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .maxVolunteers(2)
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityValidationException.class)
+                    .hasMessage("Cannot reduce max volunteers below current enrollment");
+        }
+
+        @Test
+        @DisplayName("should throw exception when updating with empty skills")
+        void shouldThrowExceptionWhenUpdatingWithEmptySkills() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .requiredSkillIds(Set.of())
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.updateOpportunity(1L, 1L, request, false))
+                    .isInstanceOf(OpportunityValidationException.class)
+                    .hasMessage("At least one skill is required");
+        }
+
+        @Test
+        @DisplayName("should update skills when valid skill IDs provided")
+        void shouldUpdateSkillsWhenValidSkillIdsProvided() {
+            // Arrange
+            UpdateOpportunityRequest request = UpdateOpportunityRequest.builder()
+                    .requiredSkillIds(Set.of(1L))
+                    .build();
+
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(skillRepository.findById(1L)).thenReturn(Optional.of(communicationSkill));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.updateOpportunity(1L, 1L, request, false);
+
+            // Assert
+            assertThat(response.getRequiredSkills()).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("cancelOpportunity()")
+    class CancelOpportunityMethod {
+
+        @Test
+        @DisplayName("should cancel opportunity in DRAFT status")
+        void shouldCancelOpportunityInDraftStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.DRAFT);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.cancelOpportunity(1L, 1L, false);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("should cancel opportunity in OPEN status")
+        void shouldCancelOpportunityInOpenStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.OPEN);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.cancelOpportunity(1L, 1L, false);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("should cancel opportunity in FULL status")
+        void shouldCancelOpportunityInFullStatus() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.FULL);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.cancelOpportunity(1L, 1L, false);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity not found")
+        void shouldThrowExceptionWhenOpportunityNotFound() {
+            // Arrange
+            when(opportunityRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.cancelOpportunity(1L, 999L, false))
+                    .isInstanceOf(OpportunityNotFoundException.class)
+                    .hasMessageContaining("999");
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner")
+        void shouldThrowExceptionWhenUserIsNotOwner() {
+            // Arrange
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.cancelOpportunity(999L, 1L, false))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Access denied");
+        }
+
+        @Test
+        @DisplayName("should allow admin to cancel any opportunity")
+        void shouldAllowAdminToCancelAnyOpportunity() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.OPEN);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+            when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            OpportunityResponse response = opportunityService.cancelOpportunity(999L, 1L, true);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is IN_PROGRESS")
+        void shouldThrowExceptionWhenOpportunityIsInProgress() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.IN_PROGRESS);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.cancelOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot cancel opportunity in progress");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is COMPLETED")
+        void shouldThrowExceptionWhenOpportunityIsCompleted() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.COMPLETED);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.cancelOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Cannot cancel completed opportunity");
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity is already CANCELLED")
+        void shouldThrowExceptionWhenOpportunityIsAlreadyCancelled() {
+            // Arrange
+            savedOpportunity.setStatus(OpportunityStatus.CANCELLED);
+            when(opportunityRepository.findById(1L)).thenReturn(Optional.of(savedOpportunity));
+
+            // Act & Assert
+            assertThatThrownBy(() -> opportunityService.cancelOpportunity(1L, 1L, false))
+                    .isInstanceOf(OpportunityStatusException.class)
+                    .hasMessage("Opportunity is already cancelled");
         }
     }
 }

@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
 import {
+  cancelOpportunity,
   createOpportunity,
   getMyOpportunities,
   getOpportunities,
   getOpportunityById,
   parseOpportunityError,
+  updateOpportunity,
 } from './opportunity'
 
 // Mock the api module
@@ -16,6 +18,7 @@ vi.mock('./api', async () => {
     api: {
       get: vi.fn(),
       post: vi.fn(),
+      put: vi.fn(),
     },
   }
 })
@@ -772,6 +775,149 @@ describe('opportunity', () => {
       const result = await parseOpportunityError(error)
 
       expect(result).toBe('Skill not found with id: 999')
+    })
+  })
+
+  describe('updateOpportunity', () => {
+    const mockUpdateData = {
+      title: 'Updated Title',
+      description: 'Updated description',
+      pointsReward: 100,
+    }
+
+    const mockUpdatedResponse = {
+      id: 1,
+      title: 'Updated Title',
+      description: 'Updated description',
+      pointsReward: 100,
+      startDate: '2024-02-01T09:00:00Z',
+      endDate: '2024-02-07T17:00:00Z',
+      maxVolunteers: 10,
+      status: 'DRAFT',
+      location: 'University Campus',
+      promoter: {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      requiredSkills: [],
+      createdAt: '2024-01-15T00:00:00Z',
+      updatedAt: '2024-01-20T00:00:00Z',
+    }
+
+    it('should call api.put with correct endpoint and data', async () => {
+      vi.mocked(api.put).mockResolvedValue(mockUpdatedResponse)
+
+      const result = await updateOpportunity(1, mockUpdateData)
+
+      expect(api.put).toHaveBeenCalledWith('/opportunities/1', mockUpdateData)
+      expect(result).toEqual(mockUpdatedResponse)
+    })
+
+    it('should return updated OpportunityResponse', async () => {
+      vi.mocked(api.put).mockResolvedValue(mockUpdatedResponse)
+
+      const result = await updateOpportunity(1, mockUpdateData)
+
+      expect(result.id).toBe(1)
+      expect(result.title).toBe('Updated Title')
+      expect(result.description).toBe('Updated description')
+      expect(result.pointsReward).toBe(100)
+    })
+
+    it('should update with partial data', async () => {
+      vi.mocked(api.put).mockResolvedValue(mockUpdatedResponse)
+
+      await updateOpportunity(1, { title: 'New Title Only' })
+
+      expect(api.put).toHaveBeenCalledWith('/opportunities/1', { title: 'New Title Only' })
+    })
+
+    it('should propagate 400 error for validation errors', async () => {
+      const error = new ApiError(400, 'Bad Request', 'End date must be after start date')
+      vi.mocked(api.put).mockRejectedValue(error)
+
+      await expect(updateOpportunity(1, mockUpdateData)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not owner', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.put).mockRejectedValue(error)
+
+      await expect(updateOpportunity(1, mockUpdateData)).rejects.toThrow(error)
+    })
+
+    it('should propagate 404 error when opportunity not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Opportunity not found with id: 999')
+      vi.mocked(api.put).mockRejectedValue(error)
+
+      await expect(updateOpportunity(999, mockUpdateData)).rejects.toThrow(error)
+    })
+  })
+
+  describe('cancelOpportunity', () => {
+    const mockCancelledResponse = {
+      id: 1,
+      title: 'Cancelled Event',
+      description: 'This event has been cancelled',
+      pointsReward: 50,
+      startDate: '2024-02-01T09:00:00Z',
+      endDate: '2024-02-07T17:00:00Z',
+      maxVolunteers: 10,
+      status: 'CANCELLED',
+      location: 'University Campus',
+      promoter: {
+        id: 1,
+        email: 'promoter@ua.pt',
+        name: 'Promoter User',
+        role: 'PROMOTER',
+        points: 0,
+        createdAt: '2024-01-01T00:00:00Z',
+      },
+      requiredSkills: [],
+      createdAt: '2024-01-15T00:00:00Z',
+    }
+
+    it('should call api.post with correct endpoint', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockCancelledResponse)
+
+      const result = await cancelOpportunity(1)
+
+      expect(api.post).toHaveBeenCalledWith('/opportunities/1/cancel', {})
+      expect(result).toEqual(mockCancelledResponse)
+    })
+
+    it('should return cancelled OpportunityResponse', async () => {
+      vi.mocked(api.post).mockResolvedValue(mockCancelledResponse)
+
+      const result = await cancelOpportunity(1)
+
+      expect(result.id).toBe(1)
+      expect(result.status).toBe('CANCELLED')
+    })
+
+    it('should propagate 400 error for invalid status', async () => {
+      const error = new ApiError(400, 'Bad Request', 'Cannot cancel opportunity in progress')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(cancelOpportunity(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not owner', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(cancelOpportunity(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 404 error when opportunity not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Opportunity not found with id: 999')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(cancelOpportunity(999)).rejects.toThrow(error)
     })
   })
 })
