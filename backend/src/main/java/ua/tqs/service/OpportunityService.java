@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.exception.OpportunityValidationException;
 import ua.tqs.exception.UserNotFoundException;
@@ -17,6 +19,7 @@ import ua.tqs.model.enums.OpportunityStatus;
 import ua.tqs.repository.OpportunityRepository;
 import ua.tqs.repository.SkillRepository;
 import ua.tqs.repository.UserRepository;
+import ua.tqs.specification.OpportunitySpecification;
 
 import java.util.HashSet;
 import java.util.List;
@@ -105,6 +108,29 @@ public class OpportunityService {
     public Page<OpportunityResponse> getAllOpenOpportunities(Pageable pageable) {
         Page<Opportunity> opportunities = opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable);
         log.debug("Retrieved {} open opportunities", opportunities.getTotalElements());
+        return opportunities.map(OpportunityResponse::fromOpportunity);
+    }
+
+    /**
+     * Get filtered open opportunities (public endpoint).
+     */
+    @Transactional(readOnly = true)
+    public Page<OpportunityResponse> getFilteredOpportunities(OpportunityFilterRequest filter, Pageable pageable) {
+        Specification<Opportunity> spec = OpportunitySpecification.withFilters(filter, OpportunityStatus.OPEN);
+        Page<Opportunity> opportunities = opportunityRepository.findAll(spec, pageable);
+        
+        if (filter != null && filter.hasFilters()) {
+            log.debug("Retrieved {} filtered opportunities (filters: skills={}, dateFrom={}, dateTo={}, minPoints={}, maxPoints={})",
+                    opportunities.getTotalElements(),
+                    filter.getSkillIds(),
+                    filter.getStartDateFrom(),
+                    filter.getStartDateTo(),
+                    filter.getMinPoints(),
+                    filter.getMaxPoints());
+        } else {
+            log.debug("Retrieved {} open opportunities (no filters)", opportunities.getTotalElements());
+        }
+        
         return opportunities.map(OpportunityResponse::fromOpportunity);
     }
 }

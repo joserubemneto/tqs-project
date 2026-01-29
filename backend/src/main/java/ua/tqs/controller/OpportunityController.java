@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,9 +21,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ua.tqs.config.JwtUserDetails;
 import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.service.OpportunityService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -36,7 +39,7 @@ public class OpportunityController {
 
     @GetMapping
     @SecurityRequirements  // Override class-level security - this is a public endpoint
-    @Operation(summary = "Get all open opportunities", description = "Get a paginated list of all open opportunities (public endpoint)")
+    @Operation(summary = "Get all open opportunities", description = "Get a paginated and filterable list of all open opportunities (public endpoint)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved opportunities")
     })
@@ -48,13 +51,33 @@ public class OpportunityController {
             @Parameter(description = "Sort field (e.g., 'startDate', 'title', 'createdAt')")
             @RequestParam(defaultValue = "startDate") String sortBy,
             @Parameter(description = "Sort direction ('asc' or 'desc')")
-            @RequestParam(defaultValue = "asc") String sortDir
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @Parameter(description = "Filter by skill IDs (comma-separated)")
+            @RequestParam(required = false) List<Long> skillIds,
+            @Parameter(description = "Filter by opportunities starting on or after this date (ISO format)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDateFrom,
+            @Parameter(description = "Filter by opportunities starting on or before this date (ISO format)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDateTo,
+            @Parameter(description = "Filter by minimum points reward")
+            @RequestParam(required = false) Integer minPoints,
+            @Parameter(description = "Filter by maximum points reward")
+            @RequestParam(required = false) Integer maxPoints
     ) {
         Sort sort = sortDir.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return ResponseEntity.ok(opportunityService.getAllOpenOpportunities(pageable));
+
+        // Build filter request
+        OpportunityFilterRequest filter = OpportunityFilterRequest.builder()
+                .skillIds(skillIds)
+                .startDateFrom(startDateFrom)
+                .startDateTo(startDateTo)
+                .minPoints(minPoints)
+                .maxPoints(maxPoints)
+                .build();
+
+        return ResponseEntity.ok(opportunityService.getFilteredOpportunities(filter, pageable));
     }
 
     @PostMapping

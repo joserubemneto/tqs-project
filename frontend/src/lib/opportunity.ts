@@ -64,7 +64,15 @@ export interface OpportunityPageResponse {
   number: number
 }
 
-export interface GetOpportunitiesParams {
+export interface OpportunityFilters {
+  skillIds?: number[]
+  startDateFrom?: string // ISO format
+  startDateTo?: string // ISO format
+  minPoints?: number
+  maxPoints?: number
+}
+
+export interface GetOpportunitiesParams extends OpportunityFilters {
   page?: number
   size?: number
   sortBy?: string
@@ -74,20 +82,34 @@ export interface GetOpportunitiesParams {
 // ==================== API Functions ====================
 
 /**
- * Get all open opportunities (public endpoint)
+ * Get all open opportunities with optional filters (public endpoint)
  */
 export async function getOpportunities(
   params?: GetOpportunitiesParams,
 ): Promise<OpportunityPageResponse> {
+  if (!params) {
+    return api.get<OpportunityPageResponse>('/opportunities')
+  }
+
+  // Build query params, only including defined values
+  const queryParams: Record<string, string | number | undefined> = {
+    page: params.page,
+    size: params.size,
+    sortBy: params.sortBy,
+    sortDir: params.sortDir,
+    minPoints: params.minPoints,
+    maxPoints: params.maxPoints,
+    startDateFrom: params.startDateFrom,
+    startDateTo: params.startDateTo,
+  }
+
+  // Handle skillIds array (Spring expects comma-separated or multiple params)
+  if (params.skillIds && params.skillIds.length > 0) {
+    ;(queryParams as Record<string, unknown>).skillIds = params.skillIds
+  }
+
   return api.get<OpportunityPageResponse>('/opportunities', {
-    params: params
-      ? {
-          page: params.page,
-          size: params.size,
-          sortBy: params.sortBy,
-          sortDir: params.sortDir,
-        }
-      : undefined,
+    params: queryParams,
   })
 }
 

@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ua.tqs.config.JwtUserDetails;
 import ua.tqs.dto.CreateOpportunityRequest;
+import ua.tqs.dto.OpportunityFilterRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.dto.SkillResponse;
 import ua.tqs.dto.UserResponse;
@@ -287,12 +288,12 @@ class OpportunityControllerTest {
         void shouldReturnOkStatus() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
             ResponseEntity<Page<OpportunityResponse>> response = 
-                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc", null, null, null, null, null);
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -303,12 +304,12 @@ class OpportunityControllerTest {
         void shouldReturnPageOfOpportunities() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
             ResponseEntity<Page<OpportunityResponse>> response = 
-                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc", null, null, null, null, null);
 
             // Assert
             assertThat(response.getBody()).isNotNull();
@@ -321,12 +322,12 @@ class OpportunityControllerTest {
         void shouldReturnEmptyPage() {
             // Arrange
             Page<OpportunityResponse> emptyPage = new PageImpl<>(List.of());
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
             // Act
             ResponseEntity<Page<OpportunityResponse>> response = 
-                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc", null, null, null, null, null);
 
             // Assert
             assertThat(response.getBody()).isNotNull();
@@ -338,14 +339,14 @@ class OpportunityControllerTest {
         void shouldPassCorrectPaginationParameters() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of());
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
-            opportunityController.getAllOpportunities(2, 20, "title", "desc");
+            opportunityController.getAllOpportunities(2, 20, "title", "desc", null, null, null, null, null);
 
             // Assert
-            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+            verify(opportunityService).getFilteredOpportunities(any(OpportunityFilterRequest.class), argThat(pageable ->
                     pageable.getPageNumber() == 2 &&
                     pageable.getPageSize() == 20 &&
                     pageable.getSort().getOrderFor("title") != null &&
@@ -358,14 +359,14 @@ class OpportunityControllerTest {
         void shouldUseAscendingSortWhenAsc() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of());
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
-            opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+            opportunityController.getAllOpportunities(0, 10, "startDate", "asc", null, null, null, null, null);
 
             // Assert
-            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+            verify(opportunityService).getFilteredOpportunities(any(OpportunityFilterRequest.class), argThat(pageable ->
                     pageable.getSort().getOrderFor("startDate").getDirection() == Sort.Direction.ASC
             ));
         }
@@ -375,31 +376,57 @@ class OpportunityControllerTest {
         void shouldUseDescendingSortWhenDesc() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of());
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
-            opportunityController.getAllOpportunities(0, 10, "startDate", "DESC");
+            opportunityController.getAllOpportunities(0, 10, "startDate", "DESC", null, null, null, null, null);
 
             // Assert
-            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+            verify(opportunityService).getFilteredOpportunities(any(OpportunityFilterRequest.class), argThat(pageable ->
                     pageable.getSort().getOrderFor("startDate").getDirection() == Sort.Direction.DESC
             ));
         }
 
         @Test
-        @DisplayName("should delegate to OpportunityService.getAllOpenOpportunities()")
+        @DisplayName("should delegate to OpportunityService.getFilteredOpportunities()")
         void shouldDelegateToOpportunityService() {
             // Arrange
             Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
-            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
                     .thenReturn(page);
 
             // Act
-            opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+            opportunityController.getAllOpportunities(0, 10, "startDate", "asc", null, null, null, null, null);
 
             // Assert
-            verify(opportunityService).getAllOpenOpportunities(any(Pageable.class));
+            verify(opportunityService).getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("should pass filter parameters to service")
+        void shouldPassFilterParametersToService() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of());
+            when(opportunityService.getFilteredOpportunities(any(OpportunityFilterRequest.class), any(Pageable.class)))
+                    .thenReturn(page);
+            List<Long> skillIds = List.of(1L, 2L);
+            LocalDateTime startDateFrom = LocalDateTime.now();
+            LocalDateTime startDateTo = LocalDateTime.now().plusDays(7);
+            Integer minPoints = 10;
+            Integer maxPoints = 100;
+
+            // Act
+            opportunityController.getAllOpportunities(0, 10, "startDate", "asc", skillIds, startDateFrom, startDateTo, minPoints, maxPoints);
+
+            // Assert
+            verify(opportunityService).getFilteredOpportunities(argThat(filter ->
+                    filter.getSkillIds() != null && filter.getSkillIds().equals(skillIds) &&
+                    filter.getStartDateFrom() != null && filter.getStartDateFrom().equals(startDateFrom) &&
+                    filter.getStartDateTo() != null && filter.getStartDateTo().equals(startDateTo) &&
+                    filter.getMinPoints() != null && filter.getMinPoints().equals(minPoints) &&
+                    filter.getMaxPoints() != null && filter.getMaxPoints().equals(maxPoints)
+            ), any(Pageable.class));
         }
     }
 }
