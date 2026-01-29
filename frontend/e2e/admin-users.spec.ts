@@ -43,7 +43,7 @@ test.describe('Admin User Management', () => {
               {
                 id: 2,
                 email: 'volunteer@ua.pt',
-                name: 'Volunteer User',
+                name: 'Sample Volunteer',
                 role: 'VOLUNTEER',
                 points: 100,
                 createdAt: '2024-01-02',
@@ -84,7 +84,7 @@ test.describe('Admin User Management', () => {
               {
                 id: 2,
                 email: 'volunteer@ua.pt',
-                name: 'Volunteer User',
+                name: 'Sample Volunteer',
                 role: 'VOLUNTEER',
                 points: 100,
                 createdAt: '2024-01-02',
@@ -110,10 +110,11 @@ test.describe('Admin User Management', () => {
 
       await page.goto('/admin/users')
 
-      // Wait for table to load
-      await expect(page.getByText('Admin User')).toBeVisible()
-      await expect(page.getByText('Volunteer User')).toBeVisible()
-      await expect(page.getByText('Promoter User')).toBeVisible()
+      // Wait for table to load - use table cell locators to avoid matching header/other elements
+      const table = page.locator('table')
+      await expect(table.getByRole('cell', { name: /Admin User/i })).toBeVisible()
+      await expect(table.getByRole('cell', { name: /Sample Volunteer/i })).toBeVisible()
+      await expect(table.getByRole('cell', { name: /Promoter User/i })).toBeVisible()
 
       // Check total count
       await expect(page.getByText(/3 total users/i)).toBeVisible()
@@ -183,7 +184,7 @@ test.describe('Admin User Management', () => {
           JSON.stringify({
             id: 2,
             email: 'volunteer@ua.pt',
-            name: 'Volunteer User',
+            name: 'Sample Volunteer',
             role: 'VOLUNTEER',
             exp: Math.floor(Date.now() / 1000) + 3600,
           }),
@@ -242,7 +243,7 @@ test.describe('Admin User Management', () => {
           {
             id: 2,
             email: 'volunteer@ua.pt',
-            name: 'Volunteer User',
+            name: 'Sample Volunteer',
             role: 'VOLUNTEER',
             points: 100,
             createdAt: '2024-01-02',
@@ -274,9 +275,10 @@ test.describe('Admin User Management', () => {
 
       await page.goto('/admin/users')
 
-      // Wait for initial load
-      await expect(page.getByText('Admin User')).toBeVisible()
-      await expect(page.getByText('Volunteer User')).toBeVisible()
+      // Wait for initial load - use table cell locators
+      const table = page.locator('table')
+      await expect(table.getByRole('cell', { name: /Admin User/i })).toBeVisible()
+      await expect(table.getByRole('cell', { name: /Sample Volunteer/i })).toBeVisible()
 
       // Search for volunteer
       await page.getByPlaceholder(/search by name or email/i).fill('volunteer')
@@ -284,8 +286,8 @@ test.describe('Admin User Management', () => {
       // Wait for debounced search
       await page.waitForTimeout(400)
 
-      // Should only show volunteer
-      await expect(page.getByText('Volunteer User')).toBeVisible()
+      // Should only show volunteer - use table cell locator
+      await expect(table.getByRole('cell', { name: /Sample Volunteer/i })).toBeVisible()
     })
   })
 
@@ -296,7 +298,7 @@ test.describe('Admin User Management', () => {
       // Login as admin
       await page.goto('/login')
       await page.getByLabel(/email/i).fill('admin@ua.pt')
-      await page.getByLabel(/password/i).fill('Admin@2024!')
+      await page.getByLabel(/password/i).fill('password')
       await page
         .locator('form')
         .getByRole('button', { name: /sign in/i })
@@ -307,10 +309,11 @@ test.describe('Admin User Management', () => {
     test('should update user role successfully', async ({ page }) => {
       await page.goto('/admin/users')
 
-      // Wait for users to load
-      await expect(page.getByText('Volunteer User')).toBeVisible()
+      // Wait for users to load - use table cell locator
+      const table = page.locator('table')
+      await expect(table.getByRole('cell', { name: /Sample Volunteer/i })).toBeVisible()
 
-      // Find the row for volunteer user and change their role
+      // Find the row for Sample Volunteer and change their role
       const volunteerRow = page.locator('tr', { hasText: 'volunteer@ua.pt' })
       const roleSelect = volunteerRow.locator('select')
 
@@ -324,8 +327,9 @@ test.describe('Admin User Management', () => {
     test('should not allow admin to change own role', async ({ page }) => {
       await page.goto('/admin/users')
 
-      // Wait for users to load
-      await expect(page.getByText('Admin User')).toBeVisible()
+      // Wait for users to load - use table cell locator
+      const table = page.locator('table')
+      await expect(table.getByRole('cell', { name: /System Administrator/i })).toBeVisible()
 
       // Find the admin row
       const adminRow = page.locator('tr', { hasText: 'admin@ua.pt' })
