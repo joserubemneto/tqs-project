@@ -12,7 +12,15 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { Badge, Button, buttonVariants, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui'
 import { getOpportunityById } from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/$opportunityId')({
@@ -32,7 +40,7 @@ function OpportunityDetailPage() {
   } = useQuery({
     queryKey: ['opportunity', id],
     queryFn: () => getOpportunityById(id),
-    enabled: !isNaN(id),
+    enabled: !Number.isNaN(id),
   })
 
   const formatDate = (dateString: string) => {
@@ -90,7 +98,10 @@ function OpportunityDetailPage() {
     const is404 = error instanceof Error && error.message.includes('404')
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="error-state">
+        <div
+          className="flex flex-col items-center justify-center py-12 text-center"
+          data-testid="error-state"
+        >
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <p className="text-destructive font-medium" data-testid="error-message">
             {is404 ? 'Opportunity not found' : 'Failed to load opportunity'}
@@ -123,7 +134,10 @@ function OpportunityDetailPage() {
   if (Number.isNaN(id)) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="invalid-id-state">
+        <div
+          className="flex flex-col items-center justify-center py-12 text-center"
+          data-testid="invalid-id-state"
+        >
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <p className="text-destructive font-medium">Invalid opportunity ID</p>
           <Link to="/opportunities" className={`${buttonVariants({ variant: 'outline' })} mt-4`}>
@@ -158,13 +172,19 @@ function OpportunityDetailPage() {
                 <CardTitle className="text-2xl" data-testid="opportunity-title">
                   {opportunity.title}
                 </CardTitle>
-                <Badge className={getStatusColor(opportunity.status)} data-testid="opportunity-status">
+                <Badge
+                  className={getStatusColor(opportunity.status)}
+                  data-testid="opportunity-status"
+                >
                   {opportunity.status}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground whitespace-pre-wrap" data-testid="opportunity-description">
+              <p
+                className="text-muted-foreground whitespace-pre-wrap"
+                data-testid="opportunity-description"
+              >
                 {opportunity.description}
               </p>
             </CardContent>

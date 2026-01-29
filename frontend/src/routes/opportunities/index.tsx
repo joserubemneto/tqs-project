@@ -201,7 +201,10 @@ function OpportunityCard({ opportunity }: OpportunityCardProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow cursor-pointer" data-testid={`opportunity-card-${opportunity.id}`}>
+    <Card
+      className="flex flex-col h-full hover:shadow-lg transition-shadow cursor-pointer"
+      data-testid={`opportunity-card-${opportunity.id}`}
+    >
       <CardHeader>
         <CardTitle className="text-lg line-clamp-2">{opportunity.title}</CardTitle>
       </CardHeader>

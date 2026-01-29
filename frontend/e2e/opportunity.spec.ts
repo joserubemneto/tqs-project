@@ -376,17 +376,44 @@ test.describe('View Opportunity Details', () => {
     maxVolunteers: 10,
     status: 'OPEN',
     location: 'University Campus',
-    promoter: { id: 1, email: 'promoter@ua.pt', name: 'Promoter', role: 'PROMOTER', points: 0, createdAt: '2024-01-01T00:00:00Z' },
+    promoter: {
+      id: 1,
+      email: 'promoter@ua.pt',
+      name: 'Promoter',
+      role: 'PROMOTER',
+      points: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+    },
     requiredSkills: [{ id: 1, name: 'Communication', category: 'COMMUNICATION', description: '' }],
     createdAt: '2024-01-15T00:00:00Z',
   }
 
-  const mockPageResponse = { content: [mockOpportunity], totalElements: 1, totalPages: 1, size: 10, number: 0 }
+  const mockPageResponse = {
+    content: [mockOpportunity],
+    totalElements: 1,
+    totalPages: 1,
+    size: 10,
+    number: 0,
+  }
 
   test('should navigate from list to detail page', async ({ page }) => {
-    await page.route('**/api/opportunities?*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockPageResponse) }))
-    await page.route('**/api/opportunities/1', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockOpportunity) }))
-    await page.route('**/api/skills', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }))
+    await page.route('**/api/opportunities?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockPageResponse),
+      }),
+    )
+    await page.route('**/api/opportunities/1', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockOpportunity),
+      }),
+    )
+    await page.route('**/api/skills', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
+    )
 
     await page.goto('/opportunities')
     await page.getByTestId('opportunity-card-link-1').click()
@@ -395,7 +422,13 @@ test.describe('View Opportunity Details', () => {
   })
 
   test('should be accessible without authentication', async ({ page }) => {
-    await page.route('**/api/opportunities/1', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockOpportunity) }))
+    await page.route('**/api/opportunities/1', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockOpportunity),
+      }),
+    )
 
     await page.goto('/')
     await page.evaluate(() => localStorage.removeItem('auth_token'))
@@ -405,7 +438,13 @@ test.describe('View Opportunity Details', () => {
   })
 
   test('should handle 404 for non-existent opportunity', async ({ page }) => {
-    await page.route('**/api/opportunities/999', (route) => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 404, message: 'Not found' }) }))
+    await page.route('**/api/opportunities/999', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 404, message: 'Not found' }),
+      }),
+    )
 
     await page.goto('/opportunities/999')
     await expect(page.getByTestId('error-state')).toBeVisible()
