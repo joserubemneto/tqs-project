@@ -386,10 +386,11 @@ class ProfileControllerIT {
         }
 
         @Test
-        @DisplayName("should return 403 FORBIDDEN when no token provided")
-        void shouldReturnForbiddenWithoutToken() throws Exception {
+        @DisplayName("should return 200 OK when no token provided (public endpoint)")
+        void shouldReturnOkWithoutToken() throws Exception {
             mockMvc.perform(get("/api/skills"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray());
         }
     }
 }
