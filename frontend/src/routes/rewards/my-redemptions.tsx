@@ -2,14 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { AlertCircle, Award, Copy, Loader2, RefreshCw, Ticket } from 'lucide-react'
 import { useState } from 'react'
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui'
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
 import { getAuthToken, isVolunteer } from '@/lib/auth'
 import {
@@ -73,9 +66,7 @@ function MyRedemptionsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Redemptions</h1>
-          <p className="text-muted-foreground mt-2">
-            View your redeemed rewards and codes
-          </p>
+          <p className="text-muted-foreground mt-2">View your redeemed rewards and codes</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
@@ -111,38 +102,37 @@ function MyRedemptionsPage() {
       )}
 
       {/* Redemptions List */}
-      {redemptions && !isLoading && !isError && (
-        <>
-          {redemptions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Ticket className="h-12 w-12 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground text-lg">No redemptions yet</p>
-              <p className="text-muted-foreground text-sm mt-2">
-                Browse rewards and redeem your points for valuable benefits
-              </p>
-              <Link to="/rewards">
-                <Button variant="primary" className="mt-4">
-                  Browse Rewards
-                </Button>
-              </Link>
+      {redemptions &&
+        !isLoading &&
+        !isError &&
+        (redemptions.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Ticket className="h-12 w-12 text-muted-foreground" />
             </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {redemptions.map((redemption) => (
-                <RedemptionCard
-                  key={redemption.id}
-                  redemption={redemption}
-                  onCopyCode={copyCode}
-                  isCopied={copiedCode === redemption.code}
-                  formatDate={formatDate}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+            <p className="text-muted-foreground text-lg">No redemptions yet</p>
+            <p className="text-muted-foreground text-sm mt-2">
+              Browse rewards and redeem your points for valuable benefits
+            </p>
+            <Link to="/rewards">
+              <Button variant="primary" className="mt-4">
+                Browse Rewards
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {redemptions.map((redemption) => (
+              <RedemptionCard
+                key={redemption.id}
+                redemption={redemption}
+                onCopyCode={copyCode}
+                isCopied={copiedCode === redemption.code}
+                formatDate={formatDate}
+              />
+            ))}
+          </div>
+        ))}
     </div>
   )
 }
@@ -183,9 +173,7 @@ function RedemptionCard({ redemption, onCopyCode, isCopied, formatDate }: Redemp
               <Copy className={`h-4 w-4 ${isCopied ? 'text-green-600' : ''}`} />
             </Button>
           </div>
-          {isCopied && (
-            <p className="text-xs text-green-600 mt-1">Copied!</p>
-          )}
+          {isCopied && <p className="text-xs text-green-600 mt-1">Copied!</p>}
         </div>
 
         {/* Details */}

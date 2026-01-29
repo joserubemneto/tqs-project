@@ -7,11 +7,7 @@ import type { OpportunityPageResponse } from '@/lib/opportunity'
 const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute:
-    (_path: string) =>
-    (options: {
-      beforeLoad?: () => void
-      component: React.ComponentType
-    }) => ({
+    (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
       ...options,
       options,
     }),
@@ -384,7 +380,11 @@ describe('Admin Opportunities Page', () => {
     })
 
     it('should show success notification after publishing', async () => {
-      mockPublishOpportunity.mockResolvedValue({ ...mockOpportunity, status: 'OPEN', title: 'Test Opportunity' })
+      mockPublishOpportunity.mockResolvedValue({
+        ...mockOpportunity,
+        status: 'OPEN',
+        title: 'Test Opportunity',
+      })
 
       renderWithQueryClient()
 
@@ -454,7 +454,11 @@ describe('Admin Opportunities Page', () => {
     })
 
     it('should show success notification after cancelling', async () => {
-      mockCancelOpportunity.mockResolvedValue({ ...mockOpportunity, status: 'CANCELLED', title: 'Test Opportunity' })
+      mockCancelOpportunity.mockResolvedValue({
+        ...mockOpportunity,
+        status: 'CANCELLED',
+        title: 'Test Opportunity',
+      })
 
       renderWithQueryClient()
 

@@ -35,11 +35,7 @@ import {
   getApprovedApplicationCount,
   getMyApplicationForOpportunity,
 } from '@/lib/application'
-import {
-  getOpportunityById,
-  type OpportunityResponse,
-  publishOpportunity,
-} from '@/lib/opportunity'
+import { getOpportunityById, type OpportunityResponse, publishOpportunity } from '@/lib/opportunity'
 
 export const Route = createFileRoute('/opportunities/$opportunityId')({
   component: OpportunityDetailPage,

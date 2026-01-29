@@ -11,8 +11,8 @@ import {
   getRewardTypeColor,
   getRewardTypeLabel,
   isRewardAvailable,
-  redeemReward,
   type RewardResponse,
+  redeemReward,
   updateReward,
 } from '@/lib/reward'
 

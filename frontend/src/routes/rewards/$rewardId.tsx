@@ -29,8 +29,8 @@ import {
   getRewardTypeColor,
   getRewardTypeLabel,
   isRewardAvailable,
-  redeemReward,
   type RedemptionResponse,
+  redeemReward,
 } from '@/lib/reward'
 
 export const Route = createFileRoute('/rewards/$rewardId')({
@@ -330,16 +330,12 @@ function RewardDetailPage() {
                   <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
                   <div>
                     <p className="font-semibold text-green-800">Reward Redeemed!</p>
-                    <p className="text-sm text-green-700 mt-1">
-                      Your redemption code:
-                    </p>
+                    <p className="text-sm text-green-700 mt-1">Your redemption code:</p>
                     <p className="text-2xl font-mono font-bold text-green-900 mt-2">
                       {redemptionResult.code}
                     </p>
                   </div>
-                  <p className="text-xs text-green-600">
-                    Save this code to claim your reward
-                  </p>
+                  <p className="text-xs text-green-600">Save this code to claim your reward</p>
                   <Link to="/rewards/my-redemptions">
                     <Button variant="outline" size="sm" className="mt-2">
                       View All My Redemptions
@@ -367,7 +363,8 @@ function RewardDetailPage() {
           {available && !redemptionResult && isVolunteer && (
             <div className="space-y-3">
               <div className="text-center text-sm text-muted-foreground">
-                Your balance: <span className="font-semibold text-yellow-600">{user?.points ?? 0} points</span>
+                Your balance:{' '}
+                <span className="font-semibold text-yellow-600">{user?.points ?? 0} points</span>
               </div>
               <Button
                 className="w-full"

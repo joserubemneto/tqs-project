@@ -18,7 +18,8 @@ vi.mock('@/lib/reward', async () => {
 
 // Mock useAuth hook
 const mockRefreshPoints = vi.fn()
-let mockUser: { id: number; email: string; name: string; role: string; points?: number } | null = null
+let mockUser: { id: number; email: string; name: string; role: string; points?: number } | null =
+  null
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({

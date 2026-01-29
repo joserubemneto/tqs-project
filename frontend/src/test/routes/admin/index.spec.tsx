@@ -127,7 +127,9 @@ describe('AdminDashboard', () => {
       render(<AdminDashboard />)
 
       expect(screen.getByText('Manage Opportunities')).toBeInTheDocument()
-      expect(screen.getByText(/view and manage all volunteering opportunities/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/view and manage all volunteering opportunities/i),
+      ).toBeInTheDocument()
     })
 
     it('should render View Opportunities button with link to /admin/opportunities', () => {

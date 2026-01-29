@@ -256,9 +256,7 @@ function OpportunitiesPage() {
             <>
               {opportunitiesData.content.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  {hasFilters
-                    ? 'No opportunities match your filter'
-                    : 'No opportunities found'}
+                  {hasFilters ? 'No opportunities match your filter' : 'No opportunities found'}
                 </div>
               ) : (
                 <Table>
@@ -340,9 +338,7 @@ function OpportunityRow({
 }: OpportunityRowProps) {
   const canPublish = opportunity.status === 'DRAFT'
   const canCancel =
-    opportunity.status === 'DRAFT' ||
-    opportunity.status === 'OPEN' ||
-    opportunity.status === 'FULL'
+    opportunity.status === 'DRAFT' || opportunity.status === 'OPEN' || opportunity.status === 'FULL'
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -354,9 +350,7 @@ function OpportunityRow({
 
   return (
     <TableRow>
-      <TableCell className="font-medium max-w-[200px] truncate">
-        {opportunity.title}
-      </TableCell>
+      <TableCell className="font-medium max-w-[200px] truncate">{opportunity.title}</TableCell>
       <TableCell>{opportunity.promoter.name}</TableCell>
       <TableCell>
         <Badge variant={STATUS_BADGE_VARIANTS[opportunity.status]}>{opportunity.status}</Badge>
@@ -365,7 +359,10 @@ function OpportunityRow({
       <TableCell>{opportunity.pointsReward}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <Link to="/opportunities/$opportunityId" params={{ opportunityId: String(opportunity.id) }}>
+          <Link
+            to="/opportunities/$opportunityId"
+            params={{ opportunityId: String(opportunity.id) }}
+          >
             <Button variant="ghost" size="sm">
               <Eye className="h-4 w-4" />
             </Button>
