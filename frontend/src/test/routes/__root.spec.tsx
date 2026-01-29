@@ -98,6 +98,13 @@ describe('RootComponent', () => {
       expect(screen.getByTestId('link-/login')).toBeInTheDocument()
       expect(screen.getByTestId('link-/register')).toBeInTheDocument()
     })
+
+    it('should show Browse Opportunities link when not logged in', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Browse Opportunities')).toBeInTheDocument()
+      expect(screen.getByTestId('link-/opportunities')).toBeInTheDocument()
+    })
   })
 
   describe('logged in as VOLUNTEER', () => {
@@ -174,6 +181,13 @@ describe('RootComponent', () => {
 
       expect(screen.queryByText('Sign In')).not.toBeInTheDocument()
       expect(screen.queryByText('Get Started')).not.toBeInTheDocument()
+    })
+
+    it('should show Browse Opportunities link when logged in', () => {
+      render(<RootComponent />)
+
+      expect(screen.getByText('Browse Opportunities')).toBeInTheDocument()
+      expect(screen.getByTestId('link-/opportunities')).toBeInTheDocument()
     })
 
     it('should call logout and navigate to home when logout is clicked', async () => {

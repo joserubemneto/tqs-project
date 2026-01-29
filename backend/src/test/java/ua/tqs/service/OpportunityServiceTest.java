@@ -8,6 +8,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import ua.tqs.dto.CreateOpportunityRequest;
 import ua.tqs.dto.OpportunityResponse;
 import ua.tqs.exception.OpportunityValidationException;
@@ -406,6 +410,158 @@ class OpportunityServiceTest {
 
             // Assert
             assertThat(opportunities).hasSize(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("getAllOpenOpportunities()")
+    class GetAllOpenOpportunitiesMethod {
+
+        private Opportunity openOpportunity;
+
+        @BeforeEach
+        void setUpOpenOpportunity() {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            openOpportunity = Opportunity.builder()
+                    .id(2L)
+                    .title("Open Opportunity")
+                    .description("An open opportunity for volunteers")
+                    .pointsReward(30)
+                    .startDate(LocalDateTime.now().plusDays(5))
+                    .endDate(LocalDateTime.now().plusDays(10))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoter)
+                    .requiredSkills(skills)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return page of open opportunities")
+        void shouldReturnPageOfOpenOpportunities() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getTitle()).isEqualTo("Open Opportunity");
+            assertThat(result.getContent().get(0).getStatus()).isEqualTo(OpportunityStatus.OPEN);
+        }
+
+        @Test
+        @DisplayName("should return empty page when no open opportunities")
+        void shouldReturnEmptyPageWhenNoOpenOpportunities() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(emptyPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+        }
+
+        @Test
+        @DisplayName("should respect pagination parameters")
+        void shouldRespectPaginationParameters() {
+            // Arrange
+            Pageable pageable = PageRequest.of(2, 5);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 11);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            assertThat(result.getNumber()).isEqualTo(2);
+            assertThat(result.getSize()).isEqualTo(5);
+            assertThat(result.getTotalElements()).isEqualTo(11);
+        }
+
+        @Test
+        @DisplayName("should query repository with OPEN status")
+        void shouldQueryRepositoryWithOpenStatus() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(emptyPage);
+
+            // Act
+            opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            verify(opportunityRepository).findByStatus(OpportunityStatus.OPEN, pageable);
+        }
+
+        @Test
+        @DisplayName("should map Opportunity to OpportunityResponse correctly")
+        void shouldMapOpportunityToResponseCorrectly() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity), pageable, 1);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            OpportunityResponse response = result.getContent().get(0);
+            assertThat(response.getId()).isEqualTo(2L);
+            assertThat(response.getTitle()).isEqualTo("Open Opportunity");
+            assertThat(response.getDescription()).isEqualTo("An open opportunity for volunteers");
+            assertThat(response.getPointsReward()).isEqualTo(30);
+            assertThat(response.getMaxVolunteers()).isEqualTo(5);
+            assertThat(response.getStatus()).isEqualTo(OpportunityStatus.OPEN);
+            assertThat(response.getPromoter()).isNotNull();
+            assertThat(response.getRequiredSkills()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("should return multiple pages of opportunities")
+        void shouldReturnMultiplePagesOfOpportunities() {
+            // Arrange
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            Opportunity secondOpportunity = Opportunity.builder()
+                    .id(3L)
+                    .title("Second Open Opportunity")
+                    .description("Another open opportunity")
+                    .pointsReward(40)
+                    .startDate(LocalDateTime.now().plusDays(7))
+                    .endDate(LocalDateTime.now().plusDays(14))
+                    .maxVolunteers(8)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoter)
+                    .requiredSkills(skills)
+                    .build();
+
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Opportunity> opportunityPage = new PageImpl<>(List.of(openOpportunity, secondOpportunity), pageable, 2);
+            when(opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable))
+                    .thenReturn(opportunityPage);
+
+            // Act
+            Page<OpportunityResponse> result = opportunityService.getAllOpenOpportunities(pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getTotalElements()).isEqualTo(2);
         }
     }
 }

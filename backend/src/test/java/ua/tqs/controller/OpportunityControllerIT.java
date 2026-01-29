@@ -435,4 +435,258 @@ class OpportunityControllerIT {
                     .andExpect(jsonPath("$[0].title").value("My Opportunity"));
         }
     }
+
+    @Nested
+    @DisplayName("GET /api/opportunities")
+    class GetAllOpportunitiesEndpoint {
+
+        @Test
+        @DisplayName("should return 200 OK without authentication")
+        void shouldReturnOkWithoutAuthentication() throws Exception {
+            mockMvc.perform(get("/api/opportunities"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should return 200 OK with empty page when no open opportunities")
+        void shouldReturnEmptyPageWhenNoOpenOpportunities() throws Exception {
+            mockMvc.perform(get("/api/opportunities"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(0))
+                    .andExpect(jsonPath("$.totalElements").value(0));
+        }
+
+        @Test
+        @DisplayName("should return only OPEN opportunities")
+        void shouldReturnOnlyOpenOpportunities() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create DRAFT opportunity (should not be returned)
+            Opportunity draftOpportunity = Opportunity.builder()
+                    .title("Draft Opportunity")
+                    .description("A draft opportunity")
+                    .pointsReward(30)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.DRAFT)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(draftOpportunity);
+
+            // Create OPEN opportunity (should be returned)
+            Opportunity openOpportunity = Opportunity.builder()
+                    .title("Open Opportunity")
+                    .description("An open opportunity")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(2))
+                    .endDate(LocalDateTime.now().plusDays(10))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(openOpportunity);
+
+            mockMvc.perform(get("/api/opportunities"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].title").value("Open Opportunity"))
+                    .andExpect(jsonPath("$.content[0].status").value("OPEN"));
+        }
+
+        @Test
+        @DisplayName("should return paginated results")
+        void shouldReturnPaginatedResults() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            // Create multiple OPEN opportunities
+            for (int i = 1; i <= 15; i++) {
+                Opportunity opportunity = Opportunity.builder()
+                        .title("Opportunity " + i)
+                        .description("Description " + i)
+                        .pointsReward(10 * i)
+                        .startDate(LocalDateTime.now().plusDays(i))
+                        .endDate(LocalDateTime.now().plusDays(i + 7))
+                        .maxVolunteers(5)
+                        .status(OpportunityStatus.OPEN)
+                        .promoter(promoterUser)
+                        .requiredSkills(skills)
+                        .build();
+                opportunityRepository.save(opportunity);
+            }
+
+            // Request first page with size 10
+            mockMvc.perform(get("/api/opportunities")
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(10))
+                    .andExpect(jsonPath("$.totalElements").value(15))
+                    .andExpect(jsonPath("$.totalPages").value(2))
+                    .andExpect(jsonPath("$.number").value(0));
+
+            // Request second page
+            mockMvc.perform(get("/api/opportunities")
+                    .param("page", "1")
+                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(5))
+                    .andExpect(jsonPath("$.number").value(1));
+        }
+
+        @Test
+        @DisplayName("should support sorting by startDate ascending")
+        void shouldSupportSortingByStartDateAscending() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            Opportunity laterOpportunity = Opportunity.builder()
+                    .title("Later Opportunity")
+                    .description("Starts later")
+                    .pointsReward(30)
+                    .startDate(LocalDateTime.now().plusDays(10))
+                    .endDate(LocalDateTime.now().plusDays(15))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(laterOpportunity);
+
+            Opportunity earlierOpportunity = Opportunity.builder()
+                    .title("Earlier Opportunity")
+                    .description("Starts earlier")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(5))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(earlierOpportunity);
+
+            mockMvc.perform(get("/api/opportunities")
+                    .param("sortBy", "startDate")
+                    .param("sortDir", "asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.content[0].title").value("Earlier Opportunity"))
+                    .andExpect(jsonPath("$.content[1].title").value("Later Opportunity"));
+        }
+
+        @Test
+        @DisplayName("should support sorting by startDate descending")
+        void shouldSupportSortingByStartDateDescending() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            Opportunity laterOpportunity = Opportunity.builder()
+                    .title("Later Opportunity")
+                    .description("Starts later")
+                    .pointsReward(30)
+                    .startDate(LocalDateTime.now().plusDays(10))
+                    .endDate(LocalDateTime.now().plusDays(15))
+                    .maxVolunteers(5)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(laterOpportunity);
+
+            Opportunity earlierOpportunity = Opportunity.builder()
+                    .title("Earlier Opportunity")
+                    .description("Starts earlier")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(5))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(earlierOpportunity);
+
+            mockMvc.perform(get("/api/opportunities")
+                    .param("sortBy", "startDate")
+                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.content[0].title").value("Later Opportunity"))
+                    .andExpect(jsonPath("$.content[1].title").value("Earlier Opportunity"));
+        }
+
+        @Test
+        @DisplayName("should return opportunity with all details")
+        void shouldReturnOpportunityWithAllDetails() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+            skills.add(leadershipSkill);
+
+            Opportunity opportunity = Opportunity.builder()
+                    .title("Detailed Opportunity")
+                    .description("A detailed opportunity with all fields")
+                    .pointsReward(100)
+                    .startDate(LocalDateTime.now().plusDays(5))
+                    .endDate(LocalDateTime.now().plusDays(12))
+                    .maxVolunteers(20)
+                    .location("University Campus, Building A")
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(opportunity);
+
+            mockMvc.perform(get("/api/opportunities"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].id").exists())
+                    .andExpect(jsonPath("$.content[0].title").value("Detailed Opportunity"))
+                    .andExpect(jsonPath("$.content[0].description").value("A detailed opportunity with all fields"))
+                    .andExpect(jsonPath("$.content[0].pointsReward").value(100))
+                    .andExpect(jsonPath("$.content[0].maxVolunteers").value(20))
+                    .andExpect(jsonPath("$.content[0].location").value("University Campus, Building A"))
+                    .andExpect(jsonPath("$.content[0].status").value("OPEN"))
+                    .andExpect(jsonPath("$.content[0].promoter.id").exists())
+                    .andExpect(jsonPath("$.content[0].promoter.name").value("Promoter User"))
+                    .andExpect(jsonPath("$.content[0].requiredSkills").isArray())
+                    .andExpect(jsonPath("$.content[0].requiredSkills.length()").value(2));
+        }
+
+        @Test
+        @DisplayName("should also work with authentication")
+        void shouldAlsoWorkWithAuthentication() throws Exception {
+            Set<Skill> skills = new HashSet<>();
+            skills.add(communicationSkill);
+
+            Opportunity opportunity = Opportunity.builder()
+                    .title("Test Opportunity")
+                    .description("Test description")
+                    .pointsReward(50)
+                    .startDate(LocalDateTime.now().plusDays(1))
+                    .endDate(LocalDateTime.now().plusDays(7))
+                    .maxVolunteers(10)
+                    .status(OpportunityStatus.OPEN)
+                    .promoter(promoterUser)
+                    .requiredSkills(skills)
+                    .build();
+            opportunityRepository.save(opportunity);
+
+            // Works with promoter token
+            mockMvc.perform(get("/api/opportunities")
+                    .header("Authorization", "Bearer " + promoterToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
+
+            // Works with volunteer token
+            mockMvc.perform(get("/api/opportunities")
+                    .header("Authorization", "Bearer " + volunteerToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
+        }
+    }
 }

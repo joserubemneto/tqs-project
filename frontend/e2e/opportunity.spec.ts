@@ -825,3 +825,349 @@ test.describe('Create Opportunity', () => {
     })
   })
 })
+
+test.describe('View Opportunities List', () => {
+  const mockOpportunity = {
+    id: 1,
+    title: 'UA Open Day Support',
+    description: 'Help with university open day activities and guide visitors around campus.',
+    pointsReward: 50,
+    startDate: '2024-02-01T09:00:00Z',
+    endDate: '2024-02-07T17:00:00Z',
+    maxVolunteers: 10,
+    status: 'OPEN',
+    location: 'University Campus',
+    promoter: {
+      id: 1,
+      email: 'promoter@ua.pt',
+      name: 'Promoter User',
+      role: 'PROMOTER',
+      points: 0,
+      createdAt: '2024-01-01T00:00:00Z',
+    },
+    requiredSkills: [
+      {
+        id: 1,
+        name: 'Communication',
+        category: 'COMMUNICATION',
+        description: 'Effective communication skills',
+      },
+    ],
+    createdAt: '2024-01-15T00:00:00Z',
+  }
+
+  const mockPageResponse = {
+    content: [mockOpportunity],
+    totalElements: 1,
+    totalPages: 1,
+    size: 10,
+    number: 0,
+  }
+
+  const emptyPageResponse = {
+    content: [],
+    totalElements: 0,
+    totalPages: 0,
+    size: 10,
+    number: 0,
+  }
+
+  test.describe('Public Access', () => {
+    test('should be accessible without authentication', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockPageResponse),
+        })
+      })
+
+      // Clear any existing auth token
+      await page.goto('/')
+      await page.evaluate(() => localStorage.removeItem('auth_token'))
+
+      await page.goto('/opportunities')
+
+      // Should not redirect to login
+      await expect(page).toHaveURL('/opportunities')
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
+    })
+
+    test('should also work with authentication', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockPageResponse),
+        })
+      })
+
+      // Set a mock volunteer token
+      const volunteerPayload = btoa(
+        JSON.stringify({ id: 1, email: 'volunteer@ua.pt', role: 'VOLUNTEER' }),
+      )
+      const mockVolunteerToken = `header.${volunteerPayload}.signature`
+
+      await page.goto('/')
+      await page.evaluate((token) => localStorage.setItem('auth_token', token), mockVolunteerToken)
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
+    })
+  })
+
+  test.describe('Page Layout', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockPageResponse),
+        })
+      })
+    })
+
+    test('should display page heading', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByRole('heading', { name: /volunteering opportunities/i })).toBeVisible()
+    })
+
+    test('should display page description', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(
+        page.getByText(/browse available opportunities and find one that matches your skills/i),
+      ).toBeVisible()
+    })
+  })
+
+  test.describe('Opportunities Display', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockPageResponse),
+        })
+      })
+    })
+
+    test('should display opportunity cards', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText('UA Open Day Support')).toBeVisible()
+    })
+
+    test('should display opportunity description', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/help with university open day activities/i)).toBeVisible()
+    })
+
+    test('should display opportunity location', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText('University Campus')).toBeVisible()
+    })
+
+    test('should display points reward', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/50 points/i)).toBeVisible()
+    })
+
+    test('should display max volunteers', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/max 10 volunteers/i)).toBeVisible()
+    })
+
+    test('should display required skills', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText('Communication')).toBeVisible()
+    })
+
+    test('should display results count', async ({ page }) => {
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/showing 1 of 1 opportunities/i)).toBeVisible()
+    })
+  })
+
+  test.describe('Empty State', () => {
+    test('should show empty state when no opportunities', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(emptyPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/no opportunities available at the moment/i)).toBeVisible()
+    })
+
+    test('should show helpful message in empty state', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(emptyPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(
+        page.getByText(/check back later for new volunteering opportunities/i),
+      ).toBeVisible()
+    })
+  })
+
+  test.describe('Error Handling', () => {
+    test('should show error message when API fails', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Internal Server Error' }),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/failed to load opportunities/i)).toBeVisible()
+    })
+
+    test('should show retry button on error', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Internal Server Error' }),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByRole('button', { name: /try again/i })).toBeVisible()
+    })
+  })
+
+  test.describe('Pagination', () => {
+    test('should show pagination when multiple pages exist', async ({ page }) => {
+      const multiPageResponse = {
+        content: [mockOpportunity],
+        totalElements: 25,
+        totalPages: 3,
+        size: 10,
+        number: 0,
+      }
+
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(multiPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByText(/page 1 of 3/i)).toBeVisible()
+    })
+
+    test('should show previous and next buttons', async ({ page }) => {
+      const multiPageResponse = {
+        content: [mockOpportunity],
+        totalElements: 25,
+        totalPages: 3,
+        size: 10,
+        number: 0,
+      }
+
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(multiPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByRole('button', { name: /previous/i })).toBeVisible()
+      await expect(page.getByRole('button', { name: /next/i })).toBeVisible()
+    })
+
+    test('should disable previous button on first page', async ({ page }) => {
+      const firstPageResponse = {
+        content: [mockOpportunity],
+        totalElements: 25,
+        totalPages: 3,
+        size: 10,
+        number: 0,
+      }
+
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(firstPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      await expect(page.getByRole('button', { name: /previous/i })).toBeDisabled()
+    })
+
+    test('should not show pagination when only one page', async ({ page }) => {
+      await page.route('**/api/opportunities*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockPageResponse),
+        })
+      })
+
+      await page.goto('/opportunities')
+
+      // Wait for content to load
+      await expect(page.getByText('UA Open Day Support')).toBeVisible()
+
+      // Pagination should not be visible for single page
+      await expect(page.getByText(/page 1 of 1/i)).not.toBeVisible()
+    })
+  })
+
+  if (isIntegration) {
+    test.describe('Integration Tests', () => {
+      test.beforeEach(async () => {
+        // Reset test data via the test reset endpoint
+        await fetch(`${API_URL}/api/test/reset`, { method: 'POST' })
+      })
+
+      test('should display opportunities from real backend', async ({ page }) => {
+        await page.goto('/opportunities')
+
+        // Page should load without errors
+        await expect(
+          page.getByRole('heading', { name: /volunteering opportunities/i }),
+        ).toBeVisible()
+      })
+
+      test('should show empty state when no open opportunities exist', async ({ page }) => {
+        await page.goto('/opportunities')
+
+        // With fresh database, there should be no open opportunities
+        await expect(page.getByText(/no opportunities available at the moment/i)).toBeVisible()
+      })
+    })
+  }
+})

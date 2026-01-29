@@ -29,6 +29,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_ENDPOINTS = {
         "/api/health",
         "/api/auth/**",
+        "/api/opportunities",  // Public endpoint for viewing opportunities
         "/api/test/**",  // Test endpoints (only available in integration-test profile)
         "/api-docs/**",
         "/swagger-ui/**",

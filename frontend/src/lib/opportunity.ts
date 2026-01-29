@@ -56,7 +56,40 @@ export interface OpportunityError {
   validationErrors?: Record<string, string>
 }
 
+export interface OpportunityPageResponse {
+  content: OpportunityResponse[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+}
+
+export interface GetOpportunitiesParams {
+  page?: number
+  size?: number
+  sortBy?: string
+  sortDir?: string
+}
+
 // ==================== API Functions ====================
+
+/**
+ * Get all open opportunities (public endpoint)
+ */
+export async function getOpportunities(
+  params?: GetOpportunitiesParams,
+): Promise<OpportunityPageResponse> {
+  return api.get<OpportunityPageResponse>('/opportunities', {
+    params: params
+      ? {
+          page: params.page,
+          size: params.size,
+          sortBy: params.sortBy,
+          sortDir: params.sortDir,
+        }
+      : undefined,
+  })
+}
 
 /**
  * Create a new volunteering opportunity
