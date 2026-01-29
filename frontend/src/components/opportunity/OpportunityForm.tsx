@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import {
   Button,
   Card,
@@ -30,6 +30,26 @@ interface FormErrors {
   maxVolunteers?: string
   skills?: string
   general?: string
+}
+
+interface FormFieldProps {
+  id: string
+  label: string
+  required?: boolean
+  error?: string
+  children: ReactNode
+}
+
+function FormField({ id, label, required, error, children }: FormFieldProps) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} required={required}>
+        {label}
+      </Label>
+      {children}
+      {error && <p className="text-sm text-error">{error}</p>}
+    </div>
+  )
 }
 
 export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
@@ -233,10 +253,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title" required>
-              Title
-            </Label>
+          <FormField id="title" label="Title" required error={errors.title}>
             <Input
               id="title"
               name="title"
@@ -247,8 +264,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
               error={!!errors.title}
               disabled={isLoading}
             />
-            {errors.title && <p className="text-sm text-error">{errors.title}</p>}
-          </div>
+          </FormField>
 
           <div className="space-y-2">
             <Label htmlFor="description" required>
@@ -275,10 +291,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="pointsReward" required>
-                Points Reward
-              </Label>
+            <FormField id="pointsReward" label="Points Reward" required error={errors.pointsReward}>
               <Input
                 id="pointsReward"
                 name="pointsReward"
@@ -290,13 +303,14 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
                 error={!!errors.pointsReward}
                 disabled={isLoading}
               />
-              {errors.pointsReward && <p className="text-sm text-error">{errors.pointsReward}</p>}
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="maxVolunteers" required>
-                Max Volunteers
-              </Label>
+            <FormField
+              id="maxVolunteers"
+              label="Max Volunteers"
+              required
+              error={errors.maxVolunteers}
+            >
               <Input
                 id="maxVolunteers"
                 name="maxVolunteers"
@@ -308,15 +322,11 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
                 error={!!errors.maxVolunteers}
                 disabled={isLoading}
               />
-              {errors.maxVolunteers && <p className="text-sm text-error">{errors.maxVolunteers}</p>}
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate" required>
-                Start Date
-              </Label>
+            <FormField id="startDate" label="Start Date" required error={errors.startDate}>
               <Input
                 id="startDate"
                 name="startDate"
@@ -326,13 +336,9 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
                 error={!!errors.startDate}
                 disabled={isLoading}
               />
-              {errors.startDate && <p className="text-sm text-error">{errors.startDate}</p>}
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="endDate" required>
-                End Date
-              </Label>
+            <FormField id="endDate" label="End Date" required error={errors.endDate}>
               <Input
                 id="endDate"
                 name="endDate"
@@ -342,12 +348,10 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
                 error={!!errors.endDate}
                 disabled={isLoading}
               />
-              {errors.endDate && <p className="text-sm text-error">{errors.endDate}</p>}
-            </div>
+            </FormField>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+          <FormField id="location" label="Location">
             <Input
               id="location"
               name="location"
@@ -357,7 +361,7 @@ export function OpportunityForm({ onSuccess }: OpportunityFormProps) {
               onChange={(e) => setLocation(e.target.value)}
               disabled={isLoading}
             />
-          </div>
+          </FormField>
 
           <div className="space-y-4">
             <Label required>Required Skills</Label>
