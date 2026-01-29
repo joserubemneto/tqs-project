@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import {
   Button,
   Card,
@@ -19,53 +19,19 @@ import {
   updateOpportunity,
 } from '@/lib/opportunity'
 import { getSkills, type SkillResponse } from '@/lib/profile'
+import {
+  FormField,
+  formatDateTimeLocal,
+  hasValidationErrors,
+  type OpportunityFormErrors,
+  validateOpportunityForm,
+} from './opportunity-form-utils'
 
 interface EditOpportunityModalProps {
   opportunity: OpportunityResponse
   isOpen: boolean
   onClose: () => void
   onSuccess: (response: OpportunityResponse) => void
-}
-
-interface FormErrors {
-  title?: string
-  description?: string
-  pointsReward?: string
-  startDate?: string
-  endDate?: string
-  maxVolunteers?: string
-  skills?: string
-  general?: string
-}
-
-interface FormFieldProps {
-  id: string
-  label: string
-  required?: boolean
-  error?: string
-  children: ReactNode
-}
-
-function FormField({ id, label, required, error, children }: FormFieldProps) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id} required={required}>
-        {label}
-      </Label>
-      {children}
-      {error && <p className="text-sm text-error">{error}</p>}
-    </div>
-  )
-}
-
-function formatDateTimeLocal(isoString: string): string {
-  const date = new Date(isoString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 export function EditOpportunityModal({
@@ -85,7 +51,7 @@ export function EditOpportunityModal({
     new Set(opportunity.requiredSkills.map((s) => s.id)),
   )
   const [availableSkills, setAvailableSkills] = useState<SkillResponse[]>([])
-  const [errors, setErrors] = useState<FormErrors>({})
+  const [errors, setErrors] = useState<OpportunityFormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingSkills, setIsLoadingSkills] = useState(true)
 
@@ -124,56 +90,18 @@ export function EditOpportunityModal({
   }, [isOpen, opportunity])
 
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
-
-    if (!title.trim()) {
-      newErrors.title = 'Title is required'
-    } else if (title.length > 255) {
-      newErrors.title = 'Title must be at most 255 characters'
-    }
-
-    if (!description.trim()) {
-      newErrors.description = 'Description is required'
-    } else if (description.length > 2000) {
-      newErrors.description = 'Description must be at most 2000 characters'
-    }
-
-    const points = parseInt(pointsReward, 10)
-    if (!pointsReward) {
-      newErrors.pointsReward = 'Points reward is required'
-    } else if (Number.isNaN(points) || points < 0) {
-      newErrors.pointsReward = 'Points reward must be at least 0'
-    }
-
-    if (!startDate) {
-      newErrors.startDate = 'Start date is required'
-    }
-
-    if (!endDate) {
-      newErrors.endDate = 'End date is required'
-    }
-
-    if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      if (end <= start) {
-        newErrors.endDate = 'End date must be after start date'
-      }
-    }
-
-    const volunteers = parseInt(maxVolunteers, 10)
-    if (!maxVolunteers) {
-      newErrors.maxVolunteers = 'Max volunteers is required'
-    } else if (Number.isNaN(volunteers) || volunteers < 1) {
-      newErrors.maxVolunteers = 'Max volunteers must be at least 1'
-    }
-
-    if (selectedSkillIds.size === 0) {
-      newErrors.skills = 'At least one skill is required'
-    }
-
+    const newErrors = validateOpportunityForm({
+      title,
+      description,
+      pointsReward,
+      startDate,
+      endDate,
+      maxVolunteers,
+      location,
+      selectedSkillIds,
+    })
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return !hasValidationErrors(newErrors)
   }
 
   const handleSubmit = async (e: FormEvent) => {
