@@ -45,7 +45,7 @@ const mockApplications: ApplicationResponse[] = [
   {
     id: 2,
     status: 'APPROVED',
-    message: null,
+    message: undefined,
     appliedAt: '2024-01-10T14:00:00Z',
     reviewedAt: '2024-01-11T10:00:00Z',
     opportunity: {
