@@ -130,7 +130,7 @@ describe('ProfileForm', () => {
       // "I love volunteering" = 19 chars, text is split into nodes so use function matcher
       // Match only the span element, not its parent div
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((_content, element) => {
           return element?.tagName === 'SPAN' && element?.textContent === '19/500'
         }),
       ).toBeInTheDocument()
