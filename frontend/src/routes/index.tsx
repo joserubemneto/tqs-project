@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   Badge,
   Button,
@@ -15,17 +15,7 @@ export const Route = createFileRoute('/')({
 
 function HomePage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">
-          UA Volunteering Platform
-        </h1>
-        <p className="text-xl text-muted max-w-2xl mx-auto">
-          Connect with volunteering opportunities at Universidade de Aveiro. Earn points, make an
-          impact, and build community.
-        </p>
-      </header>
-
+    <div className="container mx-auto px-4 pb-8">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
@@ -74,9 +64,11 @@ function HomePage() {
       <section className="mt-16 text-center">
         <h2 className="text-2xl font-semibold mb-4">Ready to make a difference?</h2>
         <div className="flex justify-center gap-4">
-          <Button variant="primary" size="lg">
-            Get Started
-          </Button>
+          <Link to="/register">
+            <Button variant="primary" size="lg">
+              Get Started
+            </Button>
+          </Link>
           <Button variant="ghost" size="lg">
             Learn More
           </Button>

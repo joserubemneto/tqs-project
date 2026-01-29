@@ -1,0 +1,22 @@
+# Dockerfile for E2E testing - runs dev server with source copied into image
+FROM node:24-alpine
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml .npmrc ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code into the image
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Start development server with host binding for Docker
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]

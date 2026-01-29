@@ -37,3 +37,9 @@ src/routeTree.gen.ts
 
 # Vite cache
 .vite/
+
+playwright-report/
+
+test-results/
+
+.pnpm-store/

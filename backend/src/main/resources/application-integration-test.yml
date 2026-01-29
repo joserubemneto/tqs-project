@@ -1,4 +1,4 @@
-# Integration test profile - used when running with PostgreSQL in Docker
+# Integration test profile - used for E2E tests with PostgreSQL in Docker
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/volunteering_test}
@@ -8,28 +8,29 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # Flyway manages schema, Hibernate validates
+      # Use 'create' for E2E tests - Hibernate creates schema from JPA entities
+      # This ensures tables exist even if Flyway doesn't run (spring-boot:run issue)
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # PostgreSQL dialect is auto-detected by Hibernate 7.x
         format_sql: true
+    # Defer datasource initialization to ensure proper startup order
+    defer-datasource-initialization: true
 
-  # Flyway settings for integration tests with PostgreSQL
+  # Flyway disabled for E2E tests - using Hibernate ddl-auto: create instead
+  # This avoids conflicts between Flyway migrations and Hibernate schema generation
+  # and ensures tables are created even when spring-boot:run doesn't trigger Flyway
   flyway:
-    enabled: true
-    locations: classpath:db/migration  # Use PostgreSQL migrations
-    baseline-on-migrate: true
-    clean-disabled: false  # Allow clean for test isolation
-    validate-on-migrate: true
-    group: true
+    enabled: false
 
 jwt:
-  secret: test-secret-key-for-testing-purposes-only-minimum-256-bits-required-here
+  secret: ${JWT_SECRET:test-secret-key-for-testing-purposes-only-minimum-256-bits-required-here}
   expiration: 3600000 # 1 hour for tests
 
 logging:
   level:
     ua.tqs: DEBUG
     org.springframework.security: DEBUG
-    org.flywaydb: DEBUG
+    org.hibernate.SQL: DEBUG

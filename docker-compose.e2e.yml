@@ -1,0 +1,57 @@
+# Docker Compose for E2E tests with full stack
+# Usage: docker-compose -f docker-compose.e2e.yml up -d --build
+# Then run: pnpm test:e2e:integration
+
+services:
+  # PostgreSQL Database for E2E tests
+  postgres-e2e:
+    image: postgres:16-alpine
+    container_name: volunteering-db-e2e
+    environment:
+      POSTGRES_DB: volunteering_e2e
+      POSTGRES_USER: e2e
+      POSTGRES_PASSWORD: e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e -d volunteering_e2e"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Backend API for E2E tests
+  backend-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.e2e
+    container_name: volunteering-api-e2e
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: integration-test
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-e2e:5432/volunteering_e2e
+      SPRING_DATASOURCE_USERNAME: e2e
+      SPRING_DATASOURCE_PASSWORD: e2e
+      JWT_SECRET: e2e-test-secret-key-for-testing-only-minimum-256-bits-required
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 180s
+      retries: 15
+
+  # Frontend for E2E tests
+  frontend-e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.e2e
+    container_name: volunteering-frontend-e2e
+    ports:
+      - "3000:3000"
+    environment:
+      # Proxy target for Vite dev server (uses Docker service name)
+      VITE_API_PROXY_TARGET: http://backend-e2e:8080
+    depends_on:
+      backend-e2e:
+        condition: service_healthy

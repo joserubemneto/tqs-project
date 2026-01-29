@@ -1,9 +1,7 @@
 name: Backend CI
 
 on:
-  pull_request:
-    branches: [master]
-  workflow_call:  # Allow being called by other workflows
+  workflow_call:  # Called by main CI workflow
 
 env:
   JAVA_VERSION: '25'
@@ -61,4 +59,116 @@ jobs:
           path: |
             backend/target/surefire-reports/
             backend/target/failsafe-reports/
+            backend/target/cucumber-reports/
           retention-days: 7
+
+      - name: Upload Cucumber reports to Xray Cloud
+        if: always()
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          JIRA_PROJECT_KEY: SCRUM  # Your Jira project key
+        run: |
+          # Skip if secrets not configured
+          if [ -z "$XRAY_CLIENT_ID" ] || [ -z "$XRAY_CLIENT_SECRET" ]; then
+            echo "Xray credentials not configured, skipping upload"
+            exit 0
+          fi
+          
+          # Check if cucumber report exists
+          if [ ! -f "target/cucumber-reports/cucumber.json" ]; then
+            echo "No Cucumber report found, skipping upload"
+            exit 0
+          fi
+          
+          # Authenticate and get token
+          echo "Authenticating with Xray Cloud..."
+          TOKEN=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" | tr -d '"')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Xray"
+            exit 1
+          fi
+          
+          # Create import info JSON for Cucumber tests
+          cat > /tmp/xray-cucumber-info.json << EOF
+          {
+            "fields": {
+              "project": { "key": "$JIRA_PROJECT_KEY" },
+              "summary": "CI Test Execution - Cucumber BDD Tests",
+              "issuetype": { "name": "Test Execution" }
+            }
+          }
+          EOF
+          
+          # Upload Cucumber results with multipart request
+          echo "Uploading Cucumber results to Xray..."
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/cucumber/multipart" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "info=@/tmp/xray-cucumber-info.json;type=application/json" \
+            -F "results=@target/cucumber-reports/cucumber.json;type=application/json")
+          
+          echo "Xray response: $RESPONSE"
+
+      - name: Upload JUnit results to Xray Cloud
+        if: always()
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          JIRA_PROJECT_KEY: SCRUM  # Your Jira project key
+        run: |
+          # Skip if secrets not configured
+          if [ -z "$XRAY_CLIENT_ID" ] || [ -z "$XRAY_CLIENT_SECRET" ]; then
+            echo "Xray credentials not configured, skipping upload"
+            exit 0
+          fi
+          
+          # Check if JUnit reports exist
+          JUNIT_FILES=$(find target/surefire-reports -name "TEST-*.xml" 2>/dev/null | head -1)
+          if [ -z "$JUNIT_FILES" ]; then
+            echo "No JUnit reports found, skipping upload"
+            exit 0
+          fi
+          
+          # Authenticate and get token
+          echo "Authenticating with Xray Cloud..."
+          TOKEN=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" | tr -d '"')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Xray"
+            exit 1
+          fi
+          
+          # Create import info JSON for Test Execution
+          cat > /tmp/xray-info.json << 'EOF'
+          {
+            "fields": {
+              "project": { "key": "SCRUM" },
+              "summary": "CI Test Execution - Backend Unit Tests",
+              "issuetype": { "name": "Test Execution" }
+            }
+          }
+          EOF
+          
+          # Combine all JUnit XML files into a single file for upload
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > /tmp/combined-junit.xml
+          echo '<testsuites>' >> /tmp/combined-junit.xml
+          for file in target/surefire-reports/TEST-*.xml; do
+            if [ -f "$file" ]; then
+              # Extract content between <testsuite> tags and append
+              sed -n '/<testsuite/,/<\/testsuite>/p' "$file" >> /tmp/combined-junit.xml
+            fi
+          done
+          echo '</testsuites>' >> /tmp/combined-junit.xml
+          
+          # Upload JUnit results with multipart request to specify test type
+          echo "Uploading JUnit results to Xray..."
+          RESPONSE=$(curl -s -X POST "https://xray.cloud.getxray.app/api/v2/import/execution/junit/multipart" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "info=@/tmp/xray-info.json;type=application/json" \
+            -F "results=@/tmp/combined-junit.xml;type=application/xml")
+          echo "Xray response: $RESPONSE"
