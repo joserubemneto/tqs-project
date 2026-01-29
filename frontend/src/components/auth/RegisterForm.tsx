@@ -10,6 +10,7 @@ import {
   Input,
   Label,
 } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   type AuthResponse,
   parseAuthError,
@@ -18,7 +19,6 @@ import {
   setAuthToken,
   type UserRole,
 } from '@/lib/auth'
-import { useAuth } from '@/contexts/AuthContext'
 
 interface RegisterFormProps {
   onSuccess?: (response: AuthResponse) => void

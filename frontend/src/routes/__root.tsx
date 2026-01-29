@@ -1,7 +1,7 @@
 import { createRootRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 
 export const Route = createRootRoute({
   component: RootComponent,

@@ -64,7 +64,7 @@ function HomePage() {
         </Card>
       </div>
 
-     {!user && (
+      {!user && (
         <section className="mt-16 text-center">
           <h2 className="text-2xl font-semibold mb-4">Ready to make a difference?</h2>
           <div className="flex justify-center gap-4">
@@ -88,7 +88,7 @@ function HomePage() {
             Find Opportunities
           </Button>
         </section>
-      )} 
+      )}
     </div>
   )
 }

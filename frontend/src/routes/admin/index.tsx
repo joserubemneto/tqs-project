@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
-import { getAuthToken } from '@/lib/auth'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui'
+import { getAuthToken } from '@/lib/auth'
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: () => {

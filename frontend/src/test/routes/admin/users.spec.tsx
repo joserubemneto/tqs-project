@@ -4,10 +4,11 @@ import { render, screen } from '@/test/test-utils'
 // Mock TanStack Router
 const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
-    ...options,
-    options,
-  }),
+  createFileRoute:
+    (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
+      ...options,
+      options,
+    }),
   Link: ({
     children,
     to,
@@ -91,8 +92,12 @@ describe('UsersPage', () => {
     it('should render placeholder text for user management table', () => {
       render(<UsersPage />)
 
-      expect(screen.getByText(/user management table will be implemented here/i)).toBeInTheDocument()
-      expect(screen.getByText(/this requires the backend api endpoints to be created first/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/user management table will be implemented here/i),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/this requires the backend api endpoints to be created first/i),
+      ).toBeInTheDocument()
     })
   })
 })

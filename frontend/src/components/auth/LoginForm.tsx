@@ -10,8 +10,14 @@ import {
   Input,
   Label,
 } from '@/components/ui'
-import { type AuthResponse, type LoginRequest, login, parseAuthError, setAuthToken } from '@/lib/auth'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  type AuthResponse,
+  type LoginRequest,
+  login,
+  parseAuthError,
+  setAuthToken,
+} from '@/lib/auth'
 
 interface LoginFormProps {
   onSuccess?: (response: AuthResponse) => void

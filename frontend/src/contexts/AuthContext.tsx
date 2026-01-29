@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getAuthToken, clearAuthToken, type UserRole } from '@/lib/auth'
+import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
+import { clearAuthToken, getAuthToken, type UserRole } from '@/lib/auth'
 
 interface User {
   id: number

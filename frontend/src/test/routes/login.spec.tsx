@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@/test/test-utils'
 import type { AuthResponse } from '@/lib/auth'
+import { render, screen } from '@/test/test-utils'
 
 // Mock TanStack Router
 const mockNavigate = vi.fn()

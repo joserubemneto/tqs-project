@@ -4,10 +4,11 @@ import { render, screen } from '@/test/test-utils'
 // Mock TanStack Router
 const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
-    ...options,
-    options,
-  }),
+  createFileRoute:
+    (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
+      ...options,
+      options,
+    }),
   Link: ({
     children,
     to,
