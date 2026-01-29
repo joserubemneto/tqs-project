@@ -26,13 +26,9 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
 }))
 
-// Store the onSuccess callback to call it with different responses
-let capturedOnSuccess: ((response: AuthResponse) => void) | undefined
-
 // Mock RegisterForm component
 vi.mock('@/components/auth/RegisterForm', () => ({
   RegisterForm: ({ onSuccess }: { onSuccess?: (response: AuthResponse) => void }) => {
-    capturedOnSuccess = onSuccess
     return (
       <div data-testid="register-form">
         <button
@@ -79,7 +75,6 @@ const RegisterPage = Route.options.component as React.ComponentType
 describe('RegisterPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    capturedOnSuccess = undefined
   })
 
   it('should render the RegisterForm component', () => {
