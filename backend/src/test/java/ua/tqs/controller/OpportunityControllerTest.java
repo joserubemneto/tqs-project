@@ -8,6 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ua.tqs.config.JwtUserDetails;
@@ -270,6 +275,131 @@ class OpportunityControllerTest {
             // Act & Assert
             assertThatThrownBy(() -> opportunityController.getMyOpportunities(currentUser))
                     .isInstanceOf(UserNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/opportunities")
+    class GetAllOpportunitiesEndpoint {
+
+        @Test
+        @DisplayName("should return HTTP 200 OK")
+        void shouldReturnOkStatus() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            ResponseEntity<Page<OpportunityResponse>> response = 
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return page of opportunities")
+        void shouldReturnPageOfOpportunities() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            ResponseEntity<Page<OpportunityResponse>> response = 
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getContent()).hasSize(1);
+            assertThat(response.getBody().getContent().get(0).getTitle()).isEqualTo("UA Open Day Support");
+        }
+
+        @Test
+        @DisplayName("should return empty page when no opportunities")
+        void shouldReturnEmptyPage() {
+            // Arrange
+            Page<OpportunityResponse> emptyPage = new PageImpl<>(List.of());
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // Act
+            ResponseEntity<Page<OpportunityResponse>> response = 
+                    opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getContent()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should pass correct pagination parameters to service")
+        void shouldPassCorrectPaginationParameters() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of());
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            opportunityController.getAllOpportunities(2, 20, "title", "desc");
+
+            // Assert
+            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+                    pageable.getPageNumber() == 2 &&
+                    pageable.getPageSize() == 20 &&
+                    pageable.getSort().getOrderFor("title") != null &&
+                    pageable.getSort().getOrderFor("title").getDirection() == Sort.Direction.DESC
+            ));
+        }
+
+        @Test
+        @DisplayName("should use ascending sort when sortDir is asc")
+        void shouldUseAscendingSortWhenAsc() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of());
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+
+            // Assert
+            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+                    pageable.getSort().getOrderFor("startDate").getDirection() == Sort.Direction.ASC
+            ));
+        }
+
+        @Test
+        @DisplayName("should use descending sort when sortDir is desc")
+        void shouldUseDescendingSortWhenDesc() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of());
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            opportunityController.getAllOpportunities(0, 10, "startDate", "DESC");
+
+            // Assert
+            verify(opportunityService).getAllOpenOpportunities(argThat(pageable ->
+                    pageable.getSort().getOrderFor("startDate").getDirection() == Sort.Direction.DESC
+            ));
+        }
+
+        @Test
+        @DisplayName("should delegate to OpportunityService.getAllOpenOpportunities()")
+        void shouldDelegateToOpportunityService() {
+            // Arrange
+            Page<OpportunityResponse> page = new PageImpl<>(List.of(opportunityResponse));
+            when(opportunityService.getAllOpenOpportunities(any(Pageable.class)))
+                    .thenReturn(page);
+
+            // Act
+            opportunityController.getAllOpportunities(0, 10, "startDate", "asc");
+
+            // Assert
+            verify(opportunityService).getAllOpenOpportunities(any(Pageable.class));
         }
     }
 }

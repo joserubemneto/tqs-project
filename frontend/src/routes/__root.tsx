@@ -27,6 +27,11 @@ function RootComponent() {
             </Link>
 
             <div className="flex items-center gap-4">
+              <Link to="/opportunities">
+                <Button variant="ghost" size="sm">
+                  Browse Opportunities
+                </Button>
+              </Link>
               {isLoading ? (
                 <div className="h-8 w-24 bg-muted animate-pulse rounded" />
               ) : user ? (

@@ -2,6 +2,8 @@ package ua.tqs.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.CreateOpportunityRequest;
@@ -94,5 +96,15 @@ public class OpportunityService {
         return opportunities.stream()
                 .map(OpportunityResponse::fromOpportunity)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all open opportunities (public endpoint).
+     */
+    @Transactional(readOnly = true)
+    public Page<OpportunityResponse> getAllOpenOpportunities(Pageable pageable) {
+        Page<Opportunity> opportunities = opportunityRepository.findByStatus(OpportunityStatus.OPEN, pageable);
+        log.debug("Retrieved {} open opportunities", opportunities.getTotalElements());
+        return opportunities.map(OpportunityResponse::fromOpportunity);
     }
 }

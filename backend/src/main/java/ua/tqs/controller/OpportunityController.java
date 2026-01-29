@@ -1,12 +1,18 @@
 package ua.tqs.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +33,29 @@ import java.util.List;
 public class OpportunityController {
 
     private final OpportunityService opportunityService;
+
+    @GetMapping
+    @SecurityRequirements  // Override class-level security - this is a public endpoint
+    @Operation(summary = "Get all open opportunities", description = "Get a paginated list of all open opportunities (public endpoint)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved opportunities")
+    })
+    public ResponseEntity<Page<OpportunityResponse>> getAllOpportunities(
+            @Parameter(description = "Page number (0-indexed)")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size")
+            @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort field (e.g., 'startDate', 'title', 'createdAt')")
+            @RequestParam(defaultValue = "startDate") String sortBy,
+            @Parameter(description = "Sort direction ('asc' or 'desc')")
+            @RequestParam(defaultValue = "asc") String sortDir
+    ) {
+        Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(opportunityService.getAllOpenOpportunities(pageable));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('PROMOTER') or hasRole('ADMIN')")
