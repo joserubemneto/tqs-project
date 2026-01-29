@@ -13,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import ua.tqs.dto.CreateRewardRequest;
 import ua.tqs.dto.UpdateRewardRequest;
 import ua.tqs.model.Partner;
@@ -42,7 +41,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
 class RewardControllerIT {
 
     @Autowired
@@ -253,7 +251,7 @@ class RewardControllerIT {
         }
 
         @Test
-        @DisplayName("should return 401 UNAUTHORIZED without token")
+        @DisplayName("should return 403 FORBIDDEN without token")
         void shouldRequireAuthentication() throws Exception {
             CreateRewardRequest request = CreateRewardRequest.builder()
                     .title("Unauthorized Reward")
@@ -265,7 +263,7 @@ class RewardControllerIT {
             mockMvc.perform(post("/api/admin/rewards")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isForbidden());
         }
 
         @Test
