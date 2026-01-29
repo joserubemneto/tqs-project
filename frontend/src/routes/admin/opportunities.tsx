@@ -11,6 +11,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import {
   Badge,
@@ -74,6 +75,40 @@ const STATUS_BADGE_VARIANTS: Record<
 
 const PAGE_SIZE = 10
 
+// Helper to parse error messages from API responses
+function parseErrorMessage(err: unknown, fallback: string): string {
+  const message = err instanceof Error ? err.message : fallback
+  try {
+    const parsed = JSON.parse(message)
+    return parsed.message || message
+  } catch {
+    return message
+  }
+}
+
+// Helper to create opportunity mutation config
+function createOpportunityMutationConfig(
+  queryClient: ReturnType<typeof useQueryClient>,
+  setNotification: (n: { type: 'success' | 'error'; message: string }) => void,
+  action: string,
+) {
+  return {
+    onSuccess: (updatedOpportunity: OpportunityResponse) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'opportunities'] })
+      setNotification({
+        type: 'success' as const,
+        message: `Successfully ${action} "${updatedOpportunity.title}"`,
+      })
+    },
+    onError: (err: unknown) => {
+      setNotification({
+        type: 'error' as const,
+        message: parseErrorMessage(err, `Failed to ${action} opportunity`),
+      })
+    },
+  }
+}
+
 function OpportunitiesPage() {
   const queryClient = useQueryClient()
 
@@ -119,43 +154,13 @@ function OpportunitiesPage() {
   // Publish mutation
   const publishMutation = useMutation({
     mutationFn: (id: number) => publishOpportunity(id),
-    onSuccess: (updatedOpportunity) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'opportunities'] })
-      setNotification({
-        type: 'success',
-        message: `Successfully published "${updatedOpportunity.title}"`,
-      })
-    },
-    onError: (err) => {
-      const message = err instanceof Error ? err.message : 'Failed to publish opportunity'
-      try {
-        const parsed = JSON.parse(message)
-        setNotification({ type: 'error', message: parsed.message || message })
-      } catch {
-        setNotification({ type: 'error', message })
-      }
-    },
+    ...createOpportunityMutationConfig(queryClient, setNotification, 'published'),
   })
 
   // Cancel mutation
   const cancelMutation = useMutation({
     mutationFn: (id: number) => cancelOpportunity(id),
-    onSuccess: (updatedOpportunity) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'opportunities'] })
-      setNotification({
-        type: 'success',
-        message: `Successfully cancelled "${updatedOpportunity.title}"`,
-      })
-    },
-    onError: (err) => {
-      const message = err instanceof Error ? err.message : 'Failed to cancel opportunity'
-      try {
-        const parsed = JSON.parse(message)
-        setNotification({ type: 'error', message: parsed.message || message })
-      } catch {
-        setNotification({ type: 'error', message })
-      }
-    },
+    ...createOpportunityMutationConfig(queryClient, setNotification, 'cancelled'),
   })
 
   const clearFilters = () => {
@@ -321,6 +326,31 @@ function OpportunitiesPage() {
   )
 }
 
+// Reusable action button with loading state
+interface ActionButtonProps {
+  onClick: () => void
+  isLoading: boolean
+  title: string
+  icon: ReactNode
+}
+
+function ActionButton({ onClick, isLoading, title, icon }: ActionButtonProps) {
+  return (
+    <Button variant="ghost" size="sm" onClick={onClick} disabled={isLoading} title={title}>
+      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}
+    </Button>
+  )
+}
+
+// Format date helper
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 interface OpportunityRowProps {
   opportunity: OpportunityResponse
   onPublish: () => void
@@ -337,16 +367,7 @@ function OpportunityRow({
   isCancelling,
 }: OpportunityRowProps) {
   const canPublish = opportunity.status === 'DRAFT'
-  const canCancel =
-    opportunity.status === 'DRAFT' || opportunity.status === 'OPEN' || opportunity.status === 'FULL'
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
+  const canCancel = ['DRAFT', 'OPEN', 'FULL'].includes(opportunity.status)
 
   return (
     <TableRow>
@@ -368,34 +389,20 @@ function OpportunityRow({
             </Button>
           </Link>
           {canPublish && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <ActionButton
               onClick={onPublish}
-              disabled={isPublishing}
+              isLoading={isPublishing}
               title="Publish"
-            >
-              {isPublishing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 text-green-600" />
-              )}
-            </Button>
+              icon={<Send className="h-4 w-4 text-green-600" />}
+            />
           )}
           {canCancel && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <ActionButton
               onClick={onCancel}
-              disabled={isCancelling}
+              isLoading={isCancelling}
               title="Cancel"
-            >
-              {isCancelling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <XCircle className="h-4 w-4 text-red-600" />
-              )}
-            </Button>
+              icon={<XCircle className="h-4 w-4 text-red-600" />}
+            />
           )}
         </div>
       </TableCell>
