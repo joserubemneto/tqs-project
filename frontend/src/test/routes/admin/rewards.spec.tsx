@@ -1,31 +1,29 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@/test/test-utils'
 
 // Mock redirect function
 const mockRedirect = vi.fn()
 
+vi.mock('@tanstack/react-router', () => ({
+  createFileRoute:
+    (_path: string) =>
+    (options: {
+      beforeLoad?: () => void
+      component: React.ComponentType
+      errorComponent?: React.ComponentType
+    }) => ({
+      ...options,
+      options,
+    }),
+  redirect: (options: { to: string; search?: Record<string, string> }) => {
+    mockRedirect(options)
+    throw new Error('Redirect')
+  },
+}))
+
 // Mock auth functions - will be configured per test
 const mockGetAuthToken = vi.fn()
 const mockIsAdmin = vi.fn()
-
-vi.mock('@tanstack/react-router', async () => {
-  const actual = await vi.importActual('@tanstack/react-router')
-  return {
-    ...actual,
-    redirect: (options: { to: string; search?: Record<string, string> }) => {
-      mockRedirect(options)
-      throw new Error('Redirect')
-    },
-  }
-})
 
 vi.mock('@/lib/auth', () => ({
   getAuthToken: () => mockGetAuthToken(),
@@ -37,46 +35,13 @@ vi.mock('@/components/reward', () => ({
   RewardsManagement: () => <div data-testid="rewards-management">Mocked RewardsManagement</div>,
 }))
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  })
-}
-
-// Import the actual route component
+// Import after mocks are set up
 import { Route as AdminRewardsRoute } from '@/routes/admin/rewards'
 
 // Get components from route
 const AdminRewardsPage = AdminRewardsRoute.options.component as React.ComponentType
 const AdminForbidden = AdminRewardsRoute.options.errorComponent as React.ComponentType
 const beforeLoad = AdminRewardsRoute.options.beforeLoad as () => void
-
-function renderAdminRewardsRoute() {
-  const queryClient = createQueryClient()
-
-  const rootRoute = createRootRoute()
-  const adminRewardsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/admin/rewards',
-    component: AdminRewardsPage,
-  })
-
-  const routeTree = rootRoute.addChildren([adminRewardsRoute])
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: ['/admin/rewards'] }),
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
-}
 
 describe('Admin Rewards Page', () => {
   beforeEach(() => {
@@ -112,32 +77,24 @@ describe('Admin Rewards Page', () => {
   })
 
   describe('AdminRewardsPage component', () => {
-    it('should render page title', async () => {
-      renderAdminRewardsRoute()
+    it('should render page title', () => {
+      render(<AdminRewardsPage />)
 
-      await waitFor(() => {
-        expect(screen.getByText('Rewards Management')).toBeInTheDocument()
-      })
+      expect(screen.getByRole('heading', { name: /rewards management/i })).toBeInTheDocument()
     })
 
-    it('should render page description', async () => {
-      renderAdminRewardsRoute()
+    it('should render page description', () => {
+      render(<AdminRewardsPage />)
 
-      await waitFor(() => {
-        expect(
-          screen.getByText(
-            'Create and manage rewards that volunteers can redeem with their points',
-          ),
-        ).toBeInTheDocument()
-      })
+      expect(
+        screen.getByText('Create and manage rewards that volunteers can redeem with their points'),
+      ).toBeInTheDocument()
     })
 
-    it('should render RewardsManagement component', async () => {
-      renderAdminRewardsRoute()
+    it('should render RewardsManagement component', () => {
+      render(<AdminRewardsPage />)
 
-      await waitFor(() => {
-        expect(screen.getByTestId('rewards-management')).toBeInTheDocument()
-      })
+      expect(screen.getByTestId('rewards-management')).toBeInTheDocument()
     })
   })
 
