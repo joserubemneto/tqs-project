@@ -154,7 +154,7 @@ describe('My Redemptions Page', () => {
       mockGetAuthToken.mockReturnValue(null)
 
       expect(() => {
-        MyRedemptionsRoute.options.beforeLoad?.()
+        MyRedemptionsRoute.options.beforeLoad?.({} as never)
       }).toThrow()
 
       expect(mockRedirect).toHaveBeenCalledWith({ to: '/login' })
@@ -165,7 +165,7 @@ describe('My Redemptions Page', () => {
       mockIsVolunteer.mockReturnValue(false)
 
       expect(() => {
-        MyRedemptionsRoute.options.beforeLoad?.()
+        MyRedemptionsRoute.options.beforeLoad?.({} as never)
       }).toThrow()
 
       expect(mockRedirect).toHaveBeenCalledWith({ to: '/', search: { error: 'forbidden' } })
@@ -176,7 +176,7 @@ describe('My Redemptions Page', () => {
       mockIsVolunteer.mockReturnValue(true)
 
       expect(() => {
-        MyRedemptionsRoute.options.beforeLoad?.()
+        MyRedemptionsRoute.options.beforeLoad?.({} as never)
       }).not.toThrow()
 
       expect(mockRedirect).not.toHaveBeenCalled()
