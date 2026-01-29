@@ -68,6 +68,18 @@ class JwtServiceTest {
 
             assertThat(token1).isNotEqualTo(token2);
         }
+
+        @Test
+        @DisplayName("should include all user claims in token (id, email, name, role)")
+        void shouldIncludeAllUserClaimsInToken() {
+            String token = jwtService.generateToken(testUser);
+
+            // Verify all claims can be extracted
+            assertThat(jwtService.extractUserId(token)).isEqualTo(1L);
+            assertThat(jwtService.extractEmail(token)).isEqualTo("test@ua.pt");
+            assertThat(jwtService.extractName(token)).isEqualTo("Test User");
+            assertThat(jwtService.extractRole(token)).isEqualTo("VOLUNTEER");
+        }
     }
 
     @Nested
@@ -131,6 +143,40 @@ class JwtServiceTest {
             String extractedRole = jwtService.extractRole(token);
 
             assertThat(extractedRole).isEqualTo("PROMOTER");
+        }
+    }
+
+    @Nested
+    @DisplayName("extractName()")
+    class ExtractName {
+
+        @Test
+        @DisplayName("should extract name from token")
+        void shouldExtractNameFromToken() {
+            String token = jwtService.generateToken(testUser);
+
+            String extractedName = jwtService.extractName(token);
+
+            assertThat(extractedName).isEqualTo("Test User");
+        }
+
+        @Test
+        @DisplayName("should extract different names for different users")
+        void shouldExtractDifferentNames() {
+            User admin = User.builder()
+                    .id(2L)
+                    .email("admin@ua.pt")
+                    .password("encodedPassword")
+                    .name("System Administrator")
+                    .role(UserRole.ADMIN)
+                    .points(0)
+                    .build();
+
+            String token = jwtService.generateToken(admin);
+
+            String extractedName = jwtService.extractName(token);
+
+            assertThat(extractedName).isEqualTo("System Administrator");
         }
     }
 

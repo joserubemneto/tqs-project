@@ -24,7 +24,8 @@ test.describe('User Registration', () => {
     })
 
     test('should have link to login page', async ({ page }) => {
-      await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible()
+      // Look for the "Already have an account? Sign in" link within the form area
+      await expect(page.locator('form').getByRole('link', { name: /sign in/i })).toBeVisible()
     })
   })
 

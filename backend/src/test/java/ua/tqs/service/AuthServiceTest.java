@@ -10,8 +10,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import ua.tqs.dto.AuthResponse;
+import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.RegisterRequest;
 import ua.tqs.exception.EmailAlreadyExistsException;
+import ua.tqs.exception.InvalidCredentialsException;
+
+import java.util.Optional;
 import ua.tqs.model.User;
 import ua.tqs.model.enums.UserRole;
 import ua.tqs.repository.UserRepository;
@@ -227,6 +231,114 @@ class AuthServiceTest {
 
             // Assert
             assertThat(response.getRole()).isEqualTo(UserRole.PROMOTER);
+        }
+    }
+
+    @Nested
+    @DisplayName("login()")
+    class LoginMethod {
+
+        private LoginRequest validLoginRequest;
+        private User existingUser;
+
+        @BeforeEach
+        void setUpLogin() {
+            validLoginRequest = LoginRequest.builder()
+                    .email("test@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            existingUser = User.builder()
+                    .id(1L)
+                    .email("test@ua.pt")
+                    .password("$2a$10$encodedPasswordHash")
+                    .name("Test User")
+                    .role(UserRole.VOLUNTEER)
+                    .points(100)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return AuthResponse for valid credentials")
+        void shouldReturnAuthResponseForValidCredentials() {
+            // Arrange
+            when(userRepository.findByEmail(validLoginRequest.getEmail())).thenReturn(Optional.of(existingUser));
+            when(passwordEncoder.matches(validLoginRequest.getPassword(), existingUser.getPassword())).thenReturn(true);
+            when(jwtService.generateToken(existingUser)).thenReturn("jwt.token.here");
+
+            // Act
+            AuthResponse response = authService.login(validLoginRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getEmail()).isEqualTo("test@ua.pt");
+            assertThat(response.getName()).isEqualTo("Test User");
+            assertThat(response.getRole()).isEqualTo(UserRole.VOLUNTEER);
+            assertThat(response.getToken()).isEqualTo("jwt.token.here");
+        }
+
+        @Test
+        @DisplayName("should throw InvalidCredentialsException for non-existent email")
+        void shouldThrowExceptionForNonExistentEmail() {
+            // Arrange
+            when(userRepository.findByEmail(validLoginRequest.getEmail())).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(validLoginRequest))
+                    .isInstanceOf(InvalidCredentialsException.class)
+                    .hasMessage("Invalid credentials");
+
+            verify(userRepository).findByEmail(validLoginRequest.getEmail());
+            verify(passwordEncoder, never()).matches(anyString(), anyString());
+            verify(jwtService, never()).generateToken(any(User.class));
+        }
+
+        @Test
+        @DisplayName("should throw InvalidCredentialsException for wrong password")
+        void shouldThrowExceptionForWrongPassword() {
+            // Arrange
+            when(userRepository.findByEmail(validLoginRequest.getEmail())).thenReturn(Optional.of(existingUser));
+            when(passwordEncoder.matches(validLoginRequest.getPassword(), existingUser.getPassword())).thenReturn(false);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(validLoginRequest))
+                    .isInstanceOf(InvalidCredentialsException.class)
+                    .hasMessage("Invalid credentials");
+
+            verify(userRepository).findByEmail(validLoginRequest.getEmail());
+            verify(passwordEncoder).matches(validLoginRequest.getPassword(), existingUser.getPassword());
+            verify(jwtService, never()).generateToken(any(User.class));
+        }
+
+        @Test
+        @DisplayName("should generate JWT token on successful login")
+        void shouldGenerateJwtToken() {
+            // Arrange
+            when(userRepository.findByEmail(validLoginRequest.getEmail())).thenReturn(Optional.of(existingUser));
+            when(passwordEncoder.matches(validLoginRequest.getPassword(), existingUser.getPassword())).thenReturn(true);
+            when(jwtService.generateToken(existingUser)).thenReturn("jwt.token.here");
+
+            // Act
+            authService.login(validLoginRequest);
+
+            // Assert
+            verify(jwtService).generateToken(existingUser);
+        }
+
+        @Test
+        @DisplayName("should verify password using PasswordEncoder")
+        void shouldVerifyPasswordWithEncoder() {
+            // Arrange
+            when(userRepository.findByEmail(validLoginRequest.getEmail())).thenReturn(Optional.of(existingUser));
+            when(passwordEncoder.matches(validLoginRequest.getPassword(), existingUser.getPassword())).thenReturn(true);
+            when(jwtService.generateToken(existingUser)).thenReturn("token");
+
+            // Act
+            authService.login(validLoginRequest);
+
+            // Assert
+            verify(passwordEncoder).matches(validLoginRequest.getPassword(), existingUser.getPassword());
         }
     }
 }

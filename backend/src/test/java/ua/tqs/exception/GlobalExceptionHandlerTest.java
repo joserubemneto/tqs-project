@@ -123,6 +123,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleInvalidCredentials()")
+    class HandleInvalidCredentials {
+
+        @Test
+        @DisplayName("should return UNAUTHORIZED status with error message")
+        void shouldReturnUnauthorizedStatus() {
+            InvalidCredentialsException exception = new InvalidCredentialsException("Invalid credentials");
+
+            ResponseEntity<ErrorResponse> response = handler.handleInvalidCredentials(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(401);
+            assertThat(response.getBody().getError()).isEqualTo("Unauthorized");
+            assertThat(response.getBody().getMessage()).isEqualTo("Invalid credentials");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include exception message in response")
+        void shouldIncludeExceptionMessage() {
+            String customMessage = "Authentication failed for user";
+            InvalidCredentialsException exception = new InvalidCredentialsException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleInvalidCredentials(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 

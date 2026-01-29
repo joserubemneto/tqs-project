@@ -26,11 +26,11 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
 }))
 
-// Mock RegisterForm component
-vi.mock('@/components/auth/RegisterForm', () => ({
-  RegisterForm: ({ onSuccess }: { onSuccess?: (response: AuthResponse) => void }) => {
+// Mock LoginForm component
+vi.mock('@/components/auth/LoginForm', () => ({
+  LoginForm: ({ onSuccess }: { onSuccess?: (response: AuthResponse) => void }) => {
     return (
-      <div data-testid="register-form">
+      <div data-testid="login-form">
         <button
           type="button"
           onClick={() =>
@@ -67,28 +67,25 @@ vi.mock('@/components/auth/RegisterForm', () => ({
 }))
 
 // Import after mocks are set up
-import { Route } from '@/routes/register'
+import { Route } from '@/routes/login'
 
 // Get the component from the route
-const RegisterPage = Route.options.component as React.ComponentType
+const LoginPage = Route.options.component as React.ComponentType
 
-describe('RegisterPage', () => {
+describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('should render the RegisterForm component', () => {
-    render(<RegisterPage />)
+  it('should render the LoginForm component', () => {
+    render(<LoginPage />)
 
-    expect(screen.getByTestId('register-form')).toBeInTheDocument()
+    expect(screen.getByTestId('login-form')).toBeInTheDocument()
   })
 
-  // Note: "Already have an account?" text is part of RegisterForm component
-  // which is tested in RegisterForm.spec.tsx
-
-  it('should navigate to home page on successful registration for non-admin users', async () => {
+  it('should navigate to home page on successful login for non-admin users', async () => {
     const user = userEvent.setup()
-    render(<RegisterPage />)
+    render(<LoginPage />)
 
     const successButton = screen.getByTestId('mock-volunteer-success')
     await user.click(successButton)
@@ -96,9 +93,9 @@ describe('RegisterPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/' })
   })
 
-  it('should navigate to admin page on successful registration for admin users', async () => {
+  it('should navigate to admin page on successful login for admin users', async () => {
     const user = userEvent.setup()
-    render(<RegisterPage />)
+    render(<LoginPage />)
 
     const successButton = screen.getByTestId('mock-admin-success')
     await user.click(successButton)
@@ -107,7 +104,7 @@ describe('RegisterPage', () => {
   })
 
   it('should have correct container styling', () => {
-    const { container } = render(<RegisterPage />)
+    const { container } = render(<LoginPage />)
 
     const mainDiv = container.firstChild as HTMLElement
     expect(mainDiv).toHaveClass('container', 'mx-auto', 'max-w-md', 'px-4', 'pb-8')

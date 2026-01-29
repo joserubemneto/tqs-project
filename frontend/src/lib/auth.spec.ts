@@ -4,6 +4,7 @@ import {
   clearAuthToken,
   getAuthToken,
   isAuthenticated,
+  login,
   parseAuthError,
   register,
   setAuthToken,
@@ -92,6 +93,64 @@ describe('auth', () => {
           email: 'existing@ua.pt',
           password: 'password123',
           name: 'Test User',
+        }),
+      ).rejects.toThrow(error)
+    })
+  })
+
+  describe('login', () => {
+    it('should call api.post with correct endpoint and data', async () => {
+      const mockResponse = {
+        id: 1,
+        email: 'test@ua.pt',
+        name: 'Test User',
+        role: 'VOLUNTEER',
+        token: 'mock-token',
+      }
+      vi.mocked(api.post).mockResolvedValue(mockResponse)
+
+      const result = await login({
+        email: 'test@ua.pt',
+        password: 'password123',
+      })
+
+      expect(api.post).toHaveBeenCalledWith('/auth/login', {
+        email: 'test@ua.pt',
+        password: 'password123',
+      })
+      expect(result).toEqual(mockResponse)
+    })
+
+    it('should return AuthResponse on success', async () => {
+      const mockResponse = {
+        id: 1,
+        email: 'test@ua.pt',
+        name: 'Test User',
+        role: 'VOLUNTEER',
+        token: 'jwt-token-here',
+      }
+      vi.mocked(api.post).mockResolvedValue(mockResponse)
+
+      const result = await login({
+        email: 'test@ua.pt',
+        password: 'password123',
+      })
+
+      expect(result.id).toBe(1)
+      expect(result.email).toBe('test@ua.pt')
+      expect(result.name).toBe('Test User')
+      expect(result.role).toBe('VOLUNTEER')
+      expect(result.token).toBe('jwt-token-here')
+    })
+
+    it('should propagate errors from api.post', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid credentials')
+      vi.mocked(api.post).mockRejectedValue(error)
+
+      await expect(
+        login({
+          email: 'test@ua.pt',
+          password: 'wrongpassword',
         }),
       ).rejects.toThrow(error)
     })

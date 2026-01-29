@@ -11,8 +11,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ua.tqs.dto.AuthResponse;
+import ua.tqs.dto.LoginRequest;
 import ua.tqs.dto.RegisterRequest;
 import ua.tqs.exception.EmailAlreadyExistsException;
+import ua.tqs.exception.InvalidCredentialsException;
 import ua.tqs.model.enums.UserRole;
 import ua.tqs.service.AuthService;
 
@@ -127,6 +129,103 @@ class AuthControllerTest {
                 request.getPassword().equals("SecurePass123") &&
                 request.getName().equals("Test User") &&
                 request.getRole() == UserRole.VOLUNTEER
+            ));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class LoginEndpoint {
+
+        private LoginRequest validLoginRequest;
+        private AuthResponse loginResponse;
+
+        @BeforeEach
+        void setUpLogin() {
+            validLoginRequest = LoginRequest.builder()
+                    .email("test@ua.pt")
+                    .password("SecurePass123")
+                    .build();
+
+            loginResponse = AuthResponse.builder()
+                    .id(1L)
+                    .email("test@ua.pt")
+                    .name("Test User")
+                    .role(UserRole.VOLUNTEER)
+                    .token("jwt.token.here")
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return HTTP 200 OK on successful login")
+        void shouldReturnOkStatus() {
+            // Arrange
+            when(authService.login(any(LoginRequest.class))).thenReturn(loginResponse);
+
+            // Act
+            ResponseEntity<AuthResponse> response = authController.login(validLoginRequest);
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        @Test
+        @DisplayName("should return AuthResponse with user details and token")
+        void shouldReturnAuthResponseWithDetails() {
+            // Arrange
+            when(authService.login(any(LoginRequest.class))).thenReturn(loginResponse);
+
+            // Act
+            ResponseEntity<AuthResponse> response = authController.login(validLoginRequest);
+
+            // Assert
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getId()).isEqualTo(1L);
+            assertThat(response.getBody().getEmail()).isEqualTo("test@ua.pt");
+            assertThat(response.getBody().getName()).isEqualTo("Test User");
+            assertThat(response.getBody().getRole()).isEqualTo(UserRole.VOLUNTEER);
+            assertThat(response.getBody().getToken()).isEqualTo("jwt.token.here");
+        }
+
+        @Test
+        @DisplayName("should delegate to AuthService.login()")
+        void shouldDelegateToAuthService() {
+            // Arrange
+            when(authService.login(any(LoginRequest.class))).thenReturn(loginResponse);
+
+            // Act
+            authController.login(validLoginRequest);
+
+            // Assert
+            verify(authService).login(validLoginRequest);
+        }
+
+        @Test
+        @DisplayName("should propagate InvalidCredentialsException from service")
+        void shouldPropagateInvalidCredentialsException() {
+            // Arrange
+            when(authService.login(any(LoginRequest.class)))
+                    .thenThrow(new InvalidCredentialsException("Invalid credentials"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> authController.login(validLoginRequest))
+                    .isInstanceOf(InvalidCredentialsException.class)
+                    .hasMessage("Invalid credentials");
+        }
+
+        @Test
+        @DisplayName("should pass request to service unchanged")
+        void shouldPassLoginRequestUnchanged() {
+            // Arrange
+            when(authService.login(any(LoginRequest.class))).thenReturn(loginResponse);
+
+            // Act
+            authController.login(validLoginRequest);
+
+            // Assert
+            verify(authService).login(argThat(request ->
+                request.getEmail().equals("test@ua.pt") &&
+                request.getPassword().equals("SecurePass123")
             ));
         }
     }

@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { RegisterForm } from '@/components/auth/RegisterForm'
+import { LoginForm } from '@/components/auth/LoginForm'
 import type { AuthResponse } from '@/lib/auth'
 
-export const Route = createFileRoute('/register')({
-  component: RegisterPage,
+export const Route = createFileRoute('/login')({
+  component: LoginPage,
 })
 
-function RegisterPage() {
+function LoginPage() {
   const navigate = useNavigate()
 
   const handleSuccess = (response: AuthResponse) => {
@@ -20,7 +20,7 @@ function RegisterPage() {
 
   return (
     <div className="container mx-auto max-w-md px-4 pb-8">
-      <RegisterForm onSuccess={handleSuccess} />
+      <LoginForm onSuccess={handleSuccess} />
     </div>
   )
 }
