@@ -156,4 +156,24 @@ public class ApplicationController {
                 applicationId, currentUser.getUserId());
         return ResponseEntity.ok(response);
     }
+
+    @PatchMapping("/applications/{applicationId}/complete")
+    @PreAuthorize("hasAnyRole('PROMOTER', 'PARTNER', 'ADMIN')")
+    @Operation(summary = "Complete an application", description = "Mark an approved volunteer application as completed and award points (PROMOTER/ADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully completed application"),
+            @ApiResponse(responseCode = "400", description = "Bad request - Invalid application status or opportunity not ended"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - User is not the opportunity owner or admin"),
+            @ApiResponse(responseCode = "404", description = "Application not found")
+    })
+    public ResponseEntity<ApplicationResponse> completeApplication(
+            @Parameter(description = "Application ID")
+            @PathVariable Long applicationId,
+            @AuthenticationPrincipal JwtUserDetails currentUser
+    ) {
+        ApplicationResponse response = applicationService.completeApplication(
+                applicationId, currentUser.getUserId());
+        return ResponseEntity.ok(response);
+    }
 }

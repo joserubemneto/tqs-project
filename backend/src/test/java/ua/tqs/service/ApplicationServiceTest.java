@@ -15,6 +15,7 @@ import ua.tqs.exception.ApplicationNotFoundException;
 import ua.tqs.exception.InvalidApplicationStatusException;
 import ua.tqs.exception.NoSpotsAvailableException;
 import ua.tqs.exception.OpportunityNotFoundException;
+import ua.tqs.exception.OpportunityNotEndedException;
 import ua.tqs.exception.OpportunityOwnershipException;
 import ua.tqs.exception.OpportunityStatusException;
 import ua.tqs.exception.UserNotFoundException;
@@ -820,6 +821,208 @@ class ApplicationServiceTest {
             verify(applicationRepository).save(argThat(app ->
                     app.getReviewedAt() != null
             ));
+        }
+    }
+
+    @Nested
+    @DisplayName("completeApplication()")
+    class CompleteApplicationMethod {
+
+        @BeforeEach
+        void setUp() {
+            // Set opportunity to have ended (endDate in the past)
+            opportunity.setEndDate(LocalDateTime.now().minusDays(1));
+            // Set application to APPROVED status
+            application.setStatus(ApplicationStatus.APPROVED);
+            application.setReviewedAt(LocalDateTime.now().minusDays(2));
+        }
+
+        @Test
+        @DisplayName("should complete approved application when user is promoter and opportunity has ended")
+        void shouldCompleteApprovedApplicationWhenUserIsPromoter() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.completeApplication(1L, 2L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.COMPLETED);
+            assertThat(response.getCompletedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should complete application when user is admin")
+        void shouldCompleteApplicationWhenUserIsAdmin() {
+            // Arrange
+            User admin = User.builder()
+                    .id(3L)
+                    .email("admin@ua.pt")
+                    .password("encoded")
+                    .name("Admin User")
+                    .role(UserRole.ADMIN)
+                    .points(0)
+                    .build();
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(3L)).thenReturn(Optional.of(admin));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            ApplicationResponse response = applicationService.completeApplication(1L, 3L);
+
+            // Assert
+            assertThat(response.getStatus()).isEqualTo(ApplicationStatus.COMPLETED);
+        }
+
+        @Test
+        @DisplayName("should award points to volunteer when completing application")
+        void shouldAwardPointsToVolunteer() {
+            // Arrange
+            volunteer.setPoints(100);
+            opportunity.setPointsReward(50);
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.completeApplication(1L, 2L);
+
+            // Assert
+            assertThat(volunteer.getPoints()).isEqualTo(150);
+            verify(userRepository).save(volunteer);
+        }
+
+        @Test
+        @DisplayName("should not award points when pointsReward is null")
+        void shouldNotAwardPointsWhenPointsRewardIsNull() {
+            // Arrange
+            volunteer.setPoints(100);
+            opportunity.setPointsReward(null);
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.completeApplication(1L, 2L);
+
+            // Assert
+            assertThat(volunteer.getPoints()).isEqualTo(100);
+            verify(userRepository, never()).save(volunteer);
+        }
+
+        @Test
+        @DisplayName("should not award points when pointsReward is zero")
+        void shouldNotAwardPointsWhenPointsRewardIsZero() {
+            // Arrange
+            volunteer.setPoints(100);
+            opportunity.setPointsReward(0);
+
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.completeApplication(1L, 2L);
+
+            // Assert
+            assertThat(volunteer.getPoints()).isEqualTo(100);
+            verify(userRepository, never()).save(volunteer);
+        }
+
+        @Test
+        @DisplayName("should throw exception when user is not owner or admin")
+        void shouldThrowExceptionWhenUserIsNotOwnerOrAdmin() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(volunteer));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.completeApplication(1L, 1L))
+                    .isInstanceOf(OpportunityOwnershipException.class)
+                    .hasMessage("Only the opportunity promoter or admin can complete applications");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when application not found")
+        void shouldThrowExceptionWhenApplicationNotFound() {
+            // Arrange
+            when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.completeApplication(999L, 2L))
+                    .isInstanceOf(ApplicationNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw exception when application is not approved")
+        void shouldThrowExceptionWhenApplicationIsNotApproved() {
+            // Arrange
+            application.setStatus(ApplicationStatus.PENDING);
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.completeApplication(1L, 2L))
+                    .isInstanceOf(InvalidApplicationStatusException.class)
+                    .hasMessage("Cannot complete application with status: PENDING");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw exception when opportunity has not ended")
+        void shouldThrowExceptionWhenOpportunityHasNotEnded() {
+            // Arrange
+            opportunity.setEndDate(LocalDateTime.now().plusDays(7)); // Future end date
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.completeApplication(1L, 2L))
+                    .isInstanceOf(OpportunityNotEndedException.class)
+                    .hasMessage("Cannot complete application: opportunity has not ended yet");
+
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should set completedAt timestamp when completing")
+        void shouldSetCompletedAtTimestampWhenCompleting() {
+            // Arrange
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+            when(applicationRepository.save(any(Application.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            // Act
+            applicationService.completeApplication(1L, 2L);
+
+            // Assert
+            verify(applicationRepository).save(argThat(app ->
+                    app.getCompletedAt() != null
+            ));
+        }
+
+        @Test
+        @DisplayName("should throw exception when already completed")
+        void shouldThrowExceptionWhenAlreadyCompleted() {
+            // Arrange
+            application.setStatus(ApplicationStatus.COMPLETED);
+            when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+            when(userRepository.findById(2L)).thenReturn(Optional.of(promoter));
+
+            // Act & Assert
+            assertThatThrownBy(() -> applicationService.completeApplication(1L, 2L))
+                    .isInstanceOf(InvalidApplicationStatusException.class)
+                    .hasMessage("Cannot complete application with status: COMPLETED");
+
+            verify(applicationRepository, never()).save(any());
         }
     }
 }

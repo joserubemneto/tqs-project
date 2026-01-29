@@ -435,6 +435,8 @@ function OpportunityDetailPage() {
             <ApplicationsManagement
               opportunityId={opportunity.id}
               maxVolunteers={opportunity.maxVolunteers}
+              endDate={opportunity.endDate}
+              pointsReward={opportunity.pointsReward}
             />
           )}
         </div>

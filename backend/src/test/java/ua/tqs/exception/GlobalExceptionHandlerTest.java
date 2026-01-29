@@ -508,6 +508,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Nested
+    @DisplayName("handleOpportunityNotEnded()")
+    class HandleOpportunityNotEnded {
+
+        @Test
+        @DisplayName("should return BAD_REQUEST status with error message")
+        void shouldReturnBadRequestStatus() {
+            OpportunityNotEndedException exception = new OpportunityNotEndedException();
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityNotEnded(exception);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getStatus()).isEqualTo(400);
+            assertThat(response.getBody().getError()).isEqualTo("Bad Request");
+            assertThat(response.getBody().getMessage()).isEqualTo("Cannot complete application: opportunity has not ended yet");
+            assertThat(response.getBody().getTimestamp()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should include custom message in response")
+        void shouldIncludeCustomMessage() {
+            String customMessage = "The opportunity end date has not passed yet";
+            OpportunityNotEndedException exception = new OpportunityNotEndedException(customMessage);
+
+            ResponseEntity<ErrorResponse> response = handler.handleOpportunityNotEnded(exception);
+
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getMessage()).isEqualTo(customMessage);
+        }
+    }
+
+    @Nested
     @DisplayName("handleGenericException()")
     class HandleGenericException {
 

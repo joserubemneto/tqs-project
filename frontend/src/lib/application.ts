@@ -133,6 +133,14 @@ export async function rejectApplication(applicationId: number): Promise<Applicat
 }
 
 /**
+ * Mark an approved application as completed and award points (PROMOTER/ADMIN only)
+ * Can only be called after the opportunity end date has passed
+ */
+export async function completeApplication(applicationId: number): Promise<ApplicationResponse> {
+  return api.patch<ApplicationResponse>(`/applications/${applicationId}/complete`)
+}
+
+/**
  * Parse API error response for application operations
  */
 export async function parseApplicationError(error: unknown): Promise<string> {

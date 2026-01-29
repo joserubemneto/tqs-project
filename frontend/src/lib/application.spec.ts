@@ -3,6 +3,7 @@ import { ApiError } from './api'
 import {
   applyToOpportunity,
   approveApplication,
+  completeApplication,
   getApplicationStatusColor,
   getApplicationStatusLabel,
   getApplicationsForOpportunity,
@@ -669,6 +670,94 @@ describe('application', () => {
       vi.mocked(api.patch).mockRejectedValue(error)
 
       await expect(rejectApplication(1)).rejects.toThrow(error)
+    })
+  })
+
+  describe('completeApplication', () => {
+    const mockCompletedApplication = {
+      id: 1,
+      status: 'COMPLETED',
+      message: 'I would love to help!',
+      appliedAt: '2024-01-15T10:00:00Z',
+      reviewedAt: '2024-01-16T10:00:00Z',
+      completedAt: '2024-02-08T12:00:00Z',
+      opportunity: {
+        id: 1,
+        title: 'UA Open Day Support',
+        status: 'COMPLETED',
+        startDate: '2024-02-01T09:00:00Z',
+        endDate: '2024-02-07T17:00:00Z',
+        pointsReward: 50,
+        location: 'University Campus',
+      },
+      volunteer: {
+        id: 1,
+        email: 'volunteer@ua.pt',
+        name: 'Volunteer User',
+        role: 'VOLUNTEER',
+        points: 50,
+      },
+    }
+
+    it('should call api.patch with correct endpoint', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockCompletedApplication)
+
+      const result = await completeApplication(1)
+
+      expect(api.patch).toHaveBeenCalledWith('/applications/1/complete')
+      expect(result).toEqual(mockCompletedApplication)
+    })
+
+    it('should return ApplicationResponse with COMPLETED status', async () => {
+      vi.mocked(api.patch).mockResolvedValue(mockCompletedApplication)
+
+      const result = await completeApplication(1)
+
+      expect(result.status).toBe('COMPLETED')
+      expect(result.completedAt).toBe('2024-02-08T12:00:00Z')
+    })
+
+    it('should propagate 404 error when application not found', async () => {
+      const error = new ApiError(404, 'Not Found', 'Application not found with id: 999')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(completeApplication(999)).rejects.toThrow(error)
+    })
+
+    it('should propagate 400 error when application is not approved', async () => {
+      const error = new ApiError(
+        400,
+        'Bad Request',
+        'Cannot complete application with status: PENDING',
+      )
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(completeApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 400 error when opportunity has not ended', async () => {
+      const error = new ApiError(
+        400,
+        'Bad Request',
+        'Cannot complete application: opportunity has not ended yet',
+      )
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(completeApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 403 error when not authorized', async () => {
+      const error = new ApiError(403, 'Forbidden', 'Access denied')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(completeApplication(1)).rejects.toThrow(error)
+    })
+
+    it('should propagate 401 error when not authenticated', async () => {
+      const error = new ApiError(401, 'Unauthorized', 'Invalid token')
+      vi.mocked(api.patch).mockRejectedValue(error)
+
+      await expect(completeApplication(1)).rejects.toThrow(error)
     })
   })
 

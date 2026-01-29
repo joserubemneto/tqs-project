@@ -91,6 +91,49 @@ test.describe('Volunteer Applications', () => {
       return opportunity.id
     }
 
+    // Helper function to create an ENDED opportunity via the test API
+    // The opportunity has ended (endDate in the past) so participation can be marked as completed
+    async function createEndedOpportunity(
+      request: import('@playwright/test').APIRequestContext,
+      title: string,
+      pointsReward: number = 100,
+    ): Promise<number> {
+      // Set dates (started 7 days ago, ended yesterday)
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 7)
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() - 1)
+
+      // Get the skill ID for Communication
+      const skillsResponse = await request.get(`${API_URL}/api/skills`)
+      const skills = await skillsResponse.json()
+      const communicationSkill = skills.find((s: { name: string }) => s.name === 'Communication')
+
+      const response = await request.post(`${API_URL}/api/test/opportunity`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        data: {
+          title,
+          description: 'E2E test opportunity that has ended',
+          pointsReward,
+          maxVolunteers: 5,
+          startDate: formatLocalDateTime(startDate),
+          endDate: formatLocalDateTime(endDate),
+          location: 'Test Location',
+          requiredSkillIds: [communicationSkill.id],
+        },
+      })
+
+      if (!response.ok()) {
+        const errorBody = await response.text()
+        console.error(`Create ended opportunity failed: ${response.status()} - ${errorBody}`)
+      }
+      expect(response.ok()).toBeTruthy()
+      const opportunity = await response.json()
+      return opportunity.id
+    }
+
     test.beforeEach(async ({ request }) => {
       // Reset database before each test
       await request.post(`${API_URL}/api/test/reset`)
@@ -293,6 +336,119 @@ test.describe('Volunteer Applications', () => {
       await loginAsVolunteer(page)
       await page.goto('/my-applications')
       await expect(page.getByTestId('status-badge')).toHaveText('Rejected')
+    })
+
+    test('should mark approved application as completed and award points', async ({
+      page,
+      request,
+    }) => {
+      const uniqueTitle = generateUniqueTitle()
+      const pointsReward = 75
+
+      // Step 1: Create an ENDED opportunity via test API (so we can mark complete)
+      const opportunityId = await createEndedOpportunity(request, uniqueTitle, pointsReward)
+
+      // Step 2: Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Step 3: Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+
+      // Step 4: Navigate to the opportunity and approve the application
+      await page.goto(`/opportunities/${opportunityId}`)
+      await expect(page.getByTestId('volunteer-name')).toHaveText('Sample Volunteer')
+      await page.getByTestId('approve-button').click()
+      await expect(page.getByTestId('application-status')).toHaveText('Approved')
+
+      // Step 5: Mark the application as completed
+      await expect(page.getByTestId('complete-button')).toBeVisible()
+      await expect(page.getByTestId('complete-button')).toBeEnabled()
+      await page.getByTestId('complete-button').click()
+
+      // Step 6: Verify application status changed to Completed
+      await expect(page.getByTestId('application-status')).toHaveText('Completed')
+      await expect(page.getByTestId('points-awarded')).toBeVisible()
+      await expect(page.getByTestId('points-awarded')).toHaveText(`+${pointsReward} points awarded`)
+
+      // Step 7: Verify volunteer sees completed status and received points
+      await logout(page)
+      await loginAsVolunteer(page)
+      await page.goto('/my-applications')
+      await expect(page.getByTestId('status-badge')).toHaveText('Completed')
+    })
+
+    test('should disable complete button when opportunity has not ended', async ({
+      page,
+      request,
+    }) => {
+      const uniqueTitle = generateUniqueTitle()
+
+      // Step 1: Create an OPEN opportunity (not ended yet) via test API
+      const opportunityId = await createOpenOpportunity(request, uniqueTitle)
+
+      // Step 2: Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Step 3: Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+
+      // Step 4: Navigate to the opportunity and approve the application
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('approve-button').click()
+      await expect(page.getByTestId('application-status')).toHaveText('Approved')
+
+      // Step 5: Verify complete button is disabled because opportunity hasn't ended
+      await expect(page.getByTestId('complete-button')).toBeVisible()
+      await expect(page.getByTestId('complete-button')).toBeDisabled()
+      await expect(page.getByTestId('complete-disabled-message')).toBeVisible()
+      await expect(
+        page.getByText(/participation can only be marked as completed after the opportunity ends/i),
+      ).toBeVisible()
+    })
+
+    test('should only show complete button for approved applications', async ({
+      page,
+      request,
+    }) => {
+      const uniqueTitle = generateUniqueTitle()
+
+      // Step 1: Create an ENDED opportunity via test API
+      const opportunityId = await createEndedOpportunity(request, uniqueTitle)
+
+      // Step 2: Login as volunteer and apply
+      await loginAsVolunteer(page)
+      await page.goto(`/opportunities/${opportunityId}`)
+      await page.getByTestId('apply-button').click()
+      await expect(page.getByTestId('application-status')).toBeVisible()
+
+      // Step 3: Logout and login as promoter
+      await logout(page)
+      await loginAsPromoter(page)
+
+      // Step 4: Navigate to the opportunity
+      await page.goto(`/opportunities/${opportunityId}`)
+
+      // Step 5: Verify pending application does NOT have complete button (only approve/reject)
+      await expect(page.getByTestId('application-status')).toHaveText('Pending')
+      await expect(page.getByTestId('approve-button')).toBeVisible()
+      await expect(page.getByTestId('reject-button')).toBeVisible()
+      await expect(page.getByTestId('complete-button')).not.toBeVisible()
+
+      // Step 6: Approve the application
+      await page.getByTestId('approve-button').click()
+      await expect(page.getByTestId('application-status')).toHaveText('Approved')
+
+      // Step 7: Now complete button should appear (opportunity has ended, application is approved)
+      await expect(page.getByTestId('complete-button')).toBeVisible()
+      await expect(page.getByTestId('complete-button')).toBeEnabled()
     })
 
     test('should not allow approve when no spots available', async ({ page, request }) => {
