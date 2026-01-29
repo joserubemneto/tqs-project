@@ -1,7 +1,7 @@
 import { Filter, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button, Input, Label } from '@/components/ui'
-import { type RewardType, getRewardTypeLabel, getRewardTypeColor } from '@/lib/reward'
+import { getRewardTypeColor, getRewardTypeLabel, type RewardType } from '@/lib/reward'
 
 export interface RewardFiltersState {
   search?: string

@@ -4,7 +4,7 @@ import { AlertCircle, Award, Loader2, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { RewardCard, RewardFilters, type RewardFiltersState } from '@/components/reward'
 import { Button, Label, Select } from '@/components/ui'
-import { getAvailableRewards, type RewardResponse } from '@/lib/reward'
+import { getAvailableRewards } from '@/lib/reward'
 
 export const Route = createFileRoute('/rewards/')({
   component: RewardsPage,
@@ -131,10 +131,7 @@ function RewardsPage() {
               {filteredAndSortedRewards.length !== 1 ? 's' : ''}{' '}
               {hasActiveFilters ? 'found' : 'available'}
               {hasActiveFilters && rewards.length !== filteredAndSortedRewards.length && (
-                <span className="text-muted-foreground/70">
-                  {' '}
-                  (of {rewards.length} total)
-                </span>
+                <span className="text-muted-foreground/70"> (of {rewards.length} total)</span>
               )}
             </p>
 
@@ -176,7 +173,9 @@ function RewardsPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-muted-foreground text-lg">No rewards available at the moment</p>
+                  <p className="text-muted-foreground text-lg">
+                    No rewards available at the moment
+                  </p>
                   <p className="text-muted-foreground text-sm mt-2">
                     Check back later for new rewards to redeem
                   </p>

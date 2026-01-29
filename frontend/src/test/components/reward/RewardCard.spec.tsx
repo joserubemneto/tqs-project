@@ -5,9 +5,22 @@ import type { RewardResponse } from '@/lib/reward'
 
 // Mock TanStack Router's Link component
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, to, params, ...props }: { children: React.ReactNode; to: string; params?: Record<string, string> }) => {
+  Link: ({
+    children,
+    to,
+    params,
+    ...props
+  }: {
+    children: React.ReactNode
+    to: string
+    params?: Record<string, string>
+  }) => {
     const href = params?.rewardId ? to.replace('$rewardId', params.rewardId) : to
-    return <a href={href} {...props}>{children}</a>
+    return (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    )
   },
 }))
 
@@ -218,7 +231,7 @@ describe('RewardCard', () => {
     it('should call onEdit when Edit button is clicked', () => {
       const mockOnEdit = vi.fn()
       render(<RewardCard reward={mockReward} showActions onEdit={mockOnEdit} />)
-      
+
       fireEvent.click(screen.getByText('Edit'))
       expect(mockOnEdit).toHaveBeenCalledWith(mockReward)
     })
@@ -226,7 +239,7 @@ describe('RewardCard', () => {
     it('should call onDelete when Deactivate button is clicked', () => {
       const mockOnDelete = vi.fn()
       render(<RewardCard reward={mockReward} showActions onDelete={mockOnDelete} />)
-      
+
       fireEvent.click(screen.getByText('Deactivate'))
       expect(mockOnDelete).toHaveBeenCalledWith(mockReward)
     })
@@ -235,14 +248,14 @@ describe('RewardCard', () => {
       const mockOnEdit = vi.fn()
       const mockOnDelete = vi.fn()
       render(<RewardCard reward={mockReward} onEdit={mockOnEdit} onDelete={mockOnDelete} />)
-      
+
       expect(screen.queryByText('Edit')).not.toBeInTheDocument()
       expect(screen.queryByText('Deactivate')).not.toBeInTheDocument()
     })
 
     it('should not show action buttons when callbacks are not provided', () => {
       render(<RewardCard reward={mockReward} showActions />)
-      
+
       expect(screen.queryByText('Edit')).not.toBeInTheDocument()
       expect(screen.queryByText('Deactivate')).not.toBeInTheDocument()
     })
@@ -251,9 +264,9 @@ describe('RewardCard', () => {
       const mockOnEdit = vi.fn()
       const mockOnDelete = vi.fn()
       render(
-        <RewardCard reward={mockReward} showActions onEdit={mockOnEdit} onDelete={mockOnDelete} />
+        <RewardCard reward={mockReward} showActions onEdit={mockOnEdit} onDelete={mockOnDelete} />,
       )
-      
+
       expect(screen.getByText('Edit')).toBeInTheDocument()
       expect(screen.getByText('Deactivate')).toBeInTheDocument()
     })
@@ -262,7 +275,7 @@ describe('RewardCard', () => {
   describe('Clickable Card (Public View)', () => {
     it('should render as a link when showActions is false', () => {
       render(<RewardCard reward={mockReward} />)
-      
+
       const link = screen.getByRole('link')
       expect(link).toBeInTheDocument()
       expect(link).toHaveAttribute('href', '/rewards/1')
@@ -270,13 +283,13 @@ describe('RewardCard', () => {
 
     it('should not render as a link when showActions is true', () => {
       render(<RewardCard reward={mockReward} showActions />)
-      
+
       expect(screen.queryByRole('link')).not.toBeInTheDocument()
     })
 
     it('should have hover effect class when clickable', () => {
       const { container } = render(<RewardCard reward={mockReward} />)
-      
+
       // Check for the hover class in the card element
       const card = container.querySelector('[class*="hover:shadow"]')
       expect(card).toBeInTheDocument()

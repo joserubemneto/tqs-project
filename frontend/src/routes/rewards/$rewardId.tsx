@@ -11,10 +11,18 @@ import {
   Package,
   RefreshCw,
 } from 'lucide-react'
-import { Badge, Button, buttonVariants, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import {
-  getReward,
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui'
+import {
   getAvailabilityText,
+  getReward,
   getRewardTypeColor,
   getRewardTypeLabel,
   isRewardAvailable,
@@ -236,7 +244,10 @@ function RewardDetailPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Status</span>
-                <Badge variant={available ? 'default' : 'secondary'} data-testid="reward-availability">
+                <Badge
+                  variant={available ? 'default' : 'secondary'}
+                  data-testid="reward-availability"
+                >
                   {available ? 'Available' : 'Unavailable'}
                 </Badge>
               </div>

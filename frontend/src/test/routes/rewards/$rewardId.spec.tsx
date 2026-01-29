@@ -20,7 +20,9 @@ vi.mock('@tanstack/react-router', async () => {
   return {
     ...actual,
     Link: ({ children, to, ...props }: { children: React.ReactNode; to: string }) => (
-      <a href={to} {...props}>{children}</a>
+      <a href={to} {...props}>
+        {children}
+      </a>
     ),
     createFileRoute: () => ({
       useParams: () => ({ rewardId: '1' }),
@@ -95,15 +97,17 @@ function TestRewardDetailPage({ rewardId = '1' }: { rewardId?: string }) {
       <div data-testid="error-state">
         <p data-testid="error-message">{is404 ? 'Reward not found' : 'Failed to load reward'}</p>
         <a href="/rewards">Back to rewards</a>
-        {!is404 && <button>Try Again</button>}
+        {!is404 && <button type="button">Try Again</button>}
       </div>
     )
   }
 
   if (!reward) return null
 
-  const available = reward.active && (reward.remainingQuantity === undefined || reward.remainingQuantity > 0)
-  const availabilityText = reward.remainingQuantity !== undefined ? `${reward.remainingQuantity} remaining` : 'Unlimited'
+  const available =
+    reward.active && (reward.remainingQuantity === undefined || reward.remainingQuantity > 0)
+  const availabilityText =
+    reward.remainingQuantity !== undefined ? `${reward.remainingQuantity} remaining` : 'Unlimited'
 
   return (
     <div>
@@ -121,10 +125,16 @@ function TestRewardDetailPage({ rewardId = '1' }: { rewardId?: string }) {
           {reward.partner.website && <a href={reward.partner.website}>Visit website</a>}
         </>
       )}
-      {reward.availableFrom && <span data-testid="reward-available-from">{reward.availableFrom}</span>}
-      {reward.availableUntil && <span data-testid="reward-available-until">{reward.availableUntil}</span>}
+      {reward.availableFrom && (
+        <span data-testid="reward-available-from">{reward.availableFrom}</span>
+      )}
+      {reward.availableUntil && (
+        <span data-testid="reward-available-until">{reward.availableUntil}</span>
+      )}
       {available ? (
-        <button disabled>Redeem Reward</button>
+        <button type="button" disabled>
+          Redeem Reward
+        </button>
       ) : (
         <p>This reward is currently not available for redemption.</p>
       )}
@@ -137,7 +147,7 @@ function renderTestPage(rewardId = '1') {
   return render(
     <QueryClientProvider client={queryClient}>
       <TestRewardDetailPage rewardId={rewardId} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   )
 }
 
@@ -170,7 +180,7 @@ describe('Reward Detail Page', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('reward-description')).toHaveTextContent(
-          'Get a free coffee at UA Cafeteria'
+          'Get a free coffee at UA Cafeteria',
         )
       })
     })
@@ -338,7 +348,7 @@ describe('Reward Detail Page', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText('This reward is currently not available for redemption.')
+          screen.getByText('This reward is currently not available for redemption.'),
         ).toBeInTheDocument()
       })
     })

@@ -117,17 +117,15 @@ export function RewardCard({ reward, showActions, onEdit, onDelete }: RewardCard
 
   // If showing actions (admin view), don't make the card clickable
   if (showActions) {
-    return (
-      <Card className={`relative ${!available ? 'opacity-60' : ''}`}>
-        {cardContent}
-      </Card>
-    )
+    return <Card className={`relative ${!available ? 'opacity-60' : ''}`}>{cardContent}</Card>
   }
 
   // Public view - make the card clickable
   return (
     <Link to="/rewards/$rewardId" params={{ rewardId: reward.id.toString() }} className="block">
-      <Card className={`relative transition-shadow hover:shadow-md ${!available ? 'opacity-60' : ''}`}>
+      <Card
+        className={`relative transition-shadow hover:shadow-md ${!available ? 'opacity-60' : ''}`}
+      >
         {cardContent}
       </Card>
     </Link>
