@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui'
-import { getAuthToken } from '@/lib/auth'
+import { getAuthToken, isAdmin } from '@/lib/auth'
+import { ShieldAlert } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: () => {
@@ -8,11 +9,31 @@ export const Route = createFileRoute('/admin/')({
     if (!token) {
       throw redirect({ to: '/login' })
     }
-    // Note: Full role check happens on the server side
-    // This is just a basic client-side guard
+    // Check if user has admin role
+    if (!isAdmin()) {
+      throw redirect({ to: '/', search: { error: 'forbidden' } })
+    }
   },
   component: AdminDashboard,
+  errorComponent: AdminForbidden,
 })
+
+function AdminForbidden() {
+  return (
+    <div className="container mx-auto px-4 py-16 text-center">
+      <ShieldAlert className="mx-auto h-16 w-16 text-destructive mb-6" />
+      <h1 className="text-3xl font-bold text-foreground mb-4">Access Denied</h1>
+      <p className="text-muted-foreground mb-8">
+        You don't have permission to access the admin panel.
+        <br />
+        Please contact an administrator if you believe this is an error.
+      </p>
+      <Link to="/">
+        <Button variant="primary">Return to Home</Button>
+      </Link>
+    </div>
+  )
+}
 
 function AdminDashboard() {
   return (

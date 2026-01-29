@@ -5,7 +5,8 @@ import { render, screen } from '@/test/test-utils'
 const mockRedirect = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute:
-    (_path: string) => (options: { beforeLoad?: () => void; component: React.ComponentType }) => ({
+    (_path: string) =>
+    (options: { beforeLoad?: () => void; component: React.ComponentType; errorComponent?: React.ComponentType }) => ({
       ...options,
       options,
     }),
@@ -22,16 +23,18 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
-  redirect: (options: { to: string }) => {
+  redirect: (options: { to: string; search?: Record<string, string> }) => {
     mockRedirect(options)
     throw new Error('Redirect')
   },
 }))
 
-// Mock getAuthToken
+// Mock getAuthToken and isAdmin
 const mockGetAuthToken = vi.fn()
+const mockIsAdmin = vi.fn()
 vi.mock('@/lib/auth', () => ({
   getAuthToken: () => mockGetAuthToken(),
+  isAdmin: () => mockIsAdmin(),
 }))
 
 // Import after mocks are set up
@@ -39,6 +42,7 @@ import { Route } from '@/routes/admin/index'
 
 // Get the component from the route
 const AdminDashboard = Route.options.component as React.ComponentType
+const AdminForbidden = Route.options.errorComponent as React.ComponentType
 const beforeLoad = Route.options.beforeLoad as () => void
 
 describe('AdminDashboard', () => {
@@ -49,20 +53,30 @@ describe('AdminDashboard', () => {
   describe('beforeLoad guard', () => {
     it('should redirect to login when no token is present', () => {
       mockGetAuthToken.mockReturnValue(null)
+      mockIsAdmin.mockReturnValue(false)
 
       expect(() => beforeLoad()).toThrow('Redirect')
       expect(mockRedirect).toHaveBeenCalledWith({ to: '/login' })
     })
 
-    it('should not redirect when token is present', () => {
+    it('should redirect to home with error when user is not admin', () => {
       mockGetAuthToken.mockReturnValue('valid-token')
+      mockIsAdmin.mockReturnValue(false)
+
+      expect(() => beforeLoad()).toThrow('Redirect')
+      expect(mockRedirect).toHaveBeenCalledWith({ to: '/', search: { error: 'forbidden' } })
+    })
+
+    it('should not redirect when token is present and user is admin', () => {
+      mockGetAuthToken.mockReturnValue('valid-token')
+      mockIsAdmin.mockReturnValue(true)
 
       expect(() => beforeLoad()).not.toThrow()
       expect(mockRedirect).not.toHaveBeenCalled()
     })
   })
 
-  describe('rendering', () => {
+  describe('rendering AdminDashboard', () => {
     it('should render the Admin Dashboard heading', () => {
       render(<AdminDashboard />)
 
@@ -112,6 +126,28 @@ describe('AdminDashboard', () => {
       for (const button of comingSoonButtons) {
         expect(button).toBeDisabled()
       }
+    })
+  })
+
+  describe('rendering AdminForbidden', () => {
+    it('should render Access Denied heading', () => {
+      render(<AdminForbidden />)
+
+      expect(screen.getByRole('heading', { name: /access denied/i })).toBeInTheDocument()
+    })
+
+    it('should render permission error message', () => {
+      render(<AdminForbidden />)
+
+      expect(screen.getByText(/you don't have permission to access the admin panel/i)).toBeInTheDocument()
+    })
+
+    it('should render Return to Home button', () => {
+      render(<AdminForbidden />)
+
+      const homeLink = screen.getByRole('link', { name: /return to home/i })
+      expect(homeLink).toBeInTheDocument()
+      expect(homeLink).toHaveAttribute('href', '/')
     })
   })
 })
