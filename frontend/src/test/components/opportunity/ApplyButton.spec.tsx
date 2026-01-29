@@ -90,6 +90,7 @@ describe('ApplyButton', () => {
         isLoading: false,
         setUser: vi.fn(),
         logout: vi.fn(),
+        refreshPoints: vi.fn(),
       })
     })
 
@@ -117,6 +118,7 @@ describe('ApplyButton', () => {
         isLoading: false,
         setUser: vi.fn(),
         logout: vi.fn(),
+        refreshPoints: vi.fn(),
       })
     })
 
@@ -143,6 +145,7 @@ describe('ApplyButton', () => {
         isLoading: false,
         setUser: vi.fn(),
         logout: vi.fn(),
+        refreshPoints: vi.fn(),
       })
     })
 
